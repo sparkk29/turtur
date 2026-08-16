@@ -51,9 +51,9 @@ Three Android phones. Airplane mode (Bluetooth on). A writes to C. B walks betwe
 - Threats and warnings: [`flaw.md`](flaw.md)
 - Deferred work: [`futureimplementation.md`](futureimplementation.md)
 
-## Build
+The Turtur brand is a **turtle dove**, not a cartoon pigeon. Icon: copper band on dusk paper. Android app lives at the repo root (`dev.turtur`).
 
-Android (Kotlin + Jetpack Compose). Open the project in Android Studio. Min SDK 26.
+Open in Android Studio (JDK 17). Assemble:
 
 ```
 ./gradlew :app:assembleDebug
