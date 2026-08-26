@@ -5,4 +5,8 @@
     <string name="loft_channel_desc">Keeps Bluetooth open so pigeons can fly while the screen is off.</string>
     <string name="loft_notif_title">Turtur loft open</string>
     <string name="loft_notif_body">%1$s · %2$d birds · Bluetooth on</string>
+    <string name="arrivals_channel_name">Arrivals</string>
+    <string name="arrivals_channel_desc">A pigeon landed on this loft. Content stays in the app.</string>
+    <string name="arrival_notif_title">A pigeon landed</string>
+    <string name="arrival_notif_body">%1$s from %2$s</string>
 </resources>

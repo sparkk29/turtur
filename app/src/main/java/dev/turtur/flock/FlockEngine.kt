@@ -42,6 +42,8 @@ class FlockEngine(private val store: TripStore) {
     var state: EngineState = EngineState()
         private set
 
+    var onArrival: ((Arrival) -> Unit)? = null
+
     fun load() {
         val trip = store.loadTrip()
         state = EngineState(
@@ -434,6 +436,7 @@ class FlockEngine(private val store: TripStore) {
         val withArrival = state.copy(arrivals = listOf(arrival) + state.arrivals)
         state = withArrival
         persist(state)
+        onArrival?.invoke(arrival)
         if (inner.kind != PigeonKind.ROSTER) {
             queueAck(inner.senderLoftId, env.pigeonId)
         }

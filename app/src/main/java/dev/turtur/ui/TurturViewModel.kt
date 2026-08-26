@@ -7,6 +7,7 @@ import dev.turtur.LoftRuntime
 import dev.turtur.flock.EngineState
 import dev.turtur.model.Habitat
 import dev.turtur.model.OkayStatus
+import dev.turtur.notify.ArrivalNotifier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -42,6 +43,15 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
     init {
         LoftRuntime.init(app)
         engine.load()
+        ArrivalNotifier.ensureChannel(app)
+        engine.onArrival = { arrival ->
+            val sender = engine.state.trip?.members
+                ?.find { it.loftId == arrival.senderLoftId }
+                ?.name
+                ?: "flock"
+            ArrivalNotifier.notifyArrival(app, arrival, sender)
+            viewModelScope.launch { refresh(screen = _ui.value.screen) }
+        }
         radio.onEngineChanged = {
             viewModelScope.launch {
                 refresh(screen = _ui.value.screen)
@@ -126,6 +136,7 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
     fun feed() {
         _ui.update { it.copy(feeding = true, error = null) }
         startRadioIfPossible()
+        ArrivalNotifier.hapticFeed(getApplication())
         radio.feed { result ->
             viewModelScope.launch {
                 engine.markFed(
@@ -135,6 +146,9 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
                     peerNames = result.peerNames,
                     failed = result.failedWrites,
                 )
+                if (result.taken > 0 || result.given > 0) {
+                    ArrivalNotifier.hapticFeed(getApplication())
+                }
                 refresh(screen = _ui.value.screen)
                 _ui.update { it.copy(feeding = false) }
             }
