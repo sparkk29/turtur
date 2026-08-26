@@ -65,6 +65,9 @@ data class RadioHello(
 data class RadioRoster(
     val t: String = "roster",
     val members: List<Member>,
+    val epoch: Long = 1,
+    val signerLoftId: String = "",
+    val sigB64: String = "",
 )
 
 @Serializable
@@ -384,7 +387,19 @@ class TurturRadio(
                 RadioHello(tripId = trip.tripId, joinMac = engine.joinMacHex(), member = trip.me),
             ),
         )
-        writeLine(gatt, ch, json.encodeToString(RadioRoster(members = trip.members)))
+        val signed = engine.signedRosterFrame()
+        writeLine(
+            gatt,
+            ch,
+            json.encodeToString(
+                RadioRoster(
+                    members = signed.members,
+                    epoch = signed.epoch,
+                    signerLoftId = signed.signerLoftId,
+                    sigB64 = signed.sigB64,
+                ),
+            ),
+        )
         writeLine(gatt, ch, json.encodeToString(RadioHave(ids = engine.knownPigeonIds())))
     }
 
@@ -516,12 +531,18 @@ class TurturRadio(
                     val hello = json.decodeFromString<RadioHello>(line)
                     if (hello.tripId != trip.tripId) return
                     if (!engine.onJoinHello(hello.member, hello.joinMac)) return
-                    engine.mergeRoster(listOf(hello.member))
                     peerByAddress[peerKey] = hello.member
                     peerNames.add("${hello.member.name} · ${hello.member.band}")
-                    // Reply so one-sided server contacts still exchange roster + inventory.
+                    val signed = engine.signedRosterFrame()
                     reply(
-                        json.encodeToString(RadioRoster(members = engine.state.trip?.members.orEmpty())),
+                        json.encodeToString(
+                            RadioRoster(
+                                members = signed.members,
+                                epoch = signed.epoch,
+                                signerLoftId = signed.signerLoftId,
+                                sigB64 = signed.sigB64,
+                            ),
+                        ),
                         clientGatt,
                         serverDevice,
                     )
@@ -530,10 +551,24 @@ class TurturRadio(
                         clientGatt,
                         serverDevice,
                     )
+                    onEngineChanged?.invoke()
                 }
                 "\"t\":\"roster\"" in line -> {
                     val roster = json.decodeFromString<RadioRoster>(line)
-                    engine.mergeRoster(roster.members)
+                    val ok = if (roster.sigB64.isNotBlank() && roster.signerLoftId.isNotBlank()) {
+                        engine.mergeSignedRoster(
+                            incoming = roster.members,
+                            epoch = roster.epoch,
+                            signerLoftId = roster.signerLoftId,
+                            sigB64 = roster.sigB64,
+                            requireSig = true,
+                        )
+                    } else {
+                        // Legacy unsigned frames during rollout: only expand with known joiners.
+                        engine.mergeRoster(roster.members)
+                        true
+                    }
+                    if (ok) onEngineChanged?.invoke()
                 }
                 "\"t\":\"have\"" in line -> {
                     val have = json.decodeFromString<RadioHave>(line)

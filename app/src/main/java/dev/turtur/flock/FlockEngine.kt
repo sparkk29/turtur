@@ -14,6 +14,7 @@ import dev.turtur.model.NOTE_MAX_CHARS
 import dev.turtur.model.OkayStatus
 import dev.turtur.model.OutboxRecord
 import dev.turtur.model.PigeonKind
+import dev.turtur.model.SignedRoster
 import dev.turtur.model.TripSnapshot
 import dev.turtur.model.label
 import dev.turtur.model.newPigeonId
@@ -54,12 +55,14 @@ class FlockEngine(private val store: TripStore) {
 
     fun invite(): Invite? {
         val trip = state.trip ?: return null
+        // Any member may invite; "creator" on the wire means the inviter whose keys
+        // bootstrap the joiner until roster gossip finishes.
         return Invite(
             tripId = trip.tripId,
             joinKeyB64 = trip.joinKeyB64,
             name = trip.name,
             habitat = trip.habitat,
-            creator = trip.members.first { it.loftId == trip.me.loftId },
+            creator = trip.me,
         )
     }
 
@@ -228,9 +231,59 @@ class FlockEngine(private val store: TripStore) {
     }
 
     fun mergeRoster(incoming: List<Member>) {
-        val trip = state.trip ?: return
+        mergeSignedRoster(incoming, epoch = 0, signerLoftId = null, sigB64 = null, requireSig = false)
+    }
+
+    /**
+     * Accept a roster gossip frame. Prefer higher epochs. When a signature is present,
+     * it must verify against a member we already trust (or the inviter we joined with).
+     */
+    fun mergeSignedRoster(
+        incoming: List<Member>,
+        epoch: Long,
+        signerLoftId: String?,
+        sigB64: String?,
+        requireSig: Boolean = true,
+    ): Boolean {
+        val trip = state.trip ?: return false
+        if (incoming.isEmpty()) return false
+        if (incoming.size > MAX_FLOCK) return false
+        if (requireSig) {
+            val signerId = signerLoftId ?: return false
+            val sig = sigB64 ?: return false
+            // Signer must already be trusted on this loft (invite bootstrap or prior gossip).
+            val signer = trip.members.find { it.loftId == signerId } ?: return false
+            val body = rosterBytes(trip.tripId, epoch, incoming)
+            if (!TurturCrypto.verify(signer.signPkB64.b64d(), body, sig.b64d())) return false
+        }
+        // Never shrink below what we know without a higher signed epoch that still contains us.
+        if (epoch > 0 && epoch < trip.rosterEpoch) return false
+        if (epoch == trip.rosterEpoch && incoming.size <= trip.members.size && requireSig) {
+            // Same epoch: only merge newly seen members if they expand the set.
+            val mergedSame = distinctMembers(trip.members + incoming).take(MAX_FLOCK)
+            if (mergedSame.size == trip.members.size) return true
+            persist(state.copy(trip = trip.copy(members = mergedSame)))
+            return true
+        }
         val merged = distinctMembers(trip.members + incoming).take(MAX_FLOCK)
-        persist(state.copy(trip = trip.copy(members = merged)))
+        if (!merged.any { it.loftId == trip.me.loftId }) return false
+        val nextEpoch = maxOf(trip.rosterEpoch, epoch).let { if (merged.size > trip.members.size && epoch <= trip.rosterEpoch) it + 1 else maxOf(it, epoch) }
+        persist(state.copy(trip = trip.copy(members = merged, rosterEpoch = nextEpoch)))
+        return true
+    }
+
+    fun signedRosterFrame(): SignedRoster {
+        val trip = state.trip ?: error("no trip")
+        val members = trip.members
+        val epoch = trip.rosterEpoch
+        val body = rosterBytes(trip.tripId, epoch, members)
+        val sig = TurturCrypto.sign(trip.signSkB64.b64d(), body)
+        return SignedRoster(
+            members = members,
+            epoch = epoch,
+            signerLoftId = trip.me.loftId,
+            sigB64 = sig.b64(),
+        )
     }
 
     fun onJoinHello(member: Member, joinMacHex: String): Boolean {
@@ -238,8 +291,30 @@ class FlockEngine(private val store: TripStore) {
         if (!verifyJoinMac(trip, member.loftId, joinMacHex)) return false
         if (trip.members.any { it.loftId == member.loftId }) return true
         if (trip.members.size >= MAX_FLOCK) return false
-        persist(state.copy(trip = trip.copy(members = trip.members + member)))
+        val merged = trip.members + member
+        persist(
+            state.copy(
+                trip = trip.copy(
+                    members = merged,
+                    rosterEpoch = trip.rosterEpoch + 1,
+                ),
+            ),
+        )
         return true
+    }
+
+    private fun rosterBytes(tripId: String, epoch: Long, members: List<Member>): ByteArray {
+        val sorted = members.sortedBy { it.loftId }
+        val sb = StringBuilder()
+        sb.append(tripId).append('|').append(epoch).append('|')
+        sorted.forEach { m ->
+            sb.append(m.loftId).append(',')
+                .append(m.name).append(',')
+                .append(m.band).append(',')
+                .append(m.sealPkB64).append(',')
+                .append(m.signPkB64).append(';')
+        }
+        return sb.toString().toByteArray(Charsets.UTF_8)
     }
 
     fun joinMacHex(): String {

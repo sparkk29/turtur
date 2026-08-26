@@ -112,6 +112,14 @@ data class TripSnapshot(
     val signSkB64: String,
     val members: List<Member>,
     val warned: Boolean = false,
+    val rosterEpoch: Long = 1,
+)
+
+data class SignedRoster(
+    val members: List<Member>,
+    val epoch: Long,
+    val signerLoftId: String,
+    val sigB64: String,
 )
 
 val BANDS = listOf("copper", "cedar", "dusk", "moss", "ash", "wine", "bone", "river")

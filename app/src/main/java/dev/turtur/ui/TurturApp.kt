@@ -261,8 +261,13 @@ private fun Roster(state: UiState, vm: TurturViewModel) {
         }
         Text("Treat this QR like a house key while the trip is live.", color = Paper.copy(alpha = 0.7f))
         state.engine.trip?.members?.forEach { member ->
-            Text("${member.name} · ${member.band}", color = Paper)
+            val you = if (member.loftId == state.engine.trip?.me?.loftId) " (you)" else ""
+            Text("${member.name} · ${member.band}$you", color = Paper)
         }
+        Text(
+            "Roster epoch ${state.engine.trip?.rosterEpoch ?: 0} · keys finish when you stand near another bird.",
+            color = Paper.copy(alpha = 0.55f),
+        )
     }
 }
 
