@@ -27,6 +27,7 @@ import android.os.ParcelUuid
 import androidx.core.app.ActivityCompat
 import dev.turtur.flock.FlockEngine
 import dev.turtur.model.Envelope
+import dev.turtur.model.Habitat
 import dev.turtur.model.Member
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -108,7 +109,11 @@ class TurturRadio(
     private var gattServer: BluetoothGattServer? = null
     private var advertising = false
     private var scanJob: Job? = null
+    private var opportunisticJob: Job? = null
     private var feeding = false
+    private var opportunistic = false
+
+    var onEngineChanged: (() -> Unit)? = null
 
     private val givenCount = AtomicInteger(0)
     private val takenCount = AtomicInteger(0)
@@ -121,6 +126,7 @@ class TurturRadio(
     private val writeBusy = ConcurrentHashMap<BluetoothGatt, Boolean>()
     private val buffers = ConcurrentHashMap<String, StringBuilder>()
     private val activeGatts = ConcurrentHashMap.newKeySet<BluetoothGatt>()
+    private val inRangeAddresses = ConcurrentHashMap.newKeySet<String>()
 
     fun hasPermissions(): Boolean {
         val needed = mutableListOf<String>()
@@ -141,19 +147,63 @@ class TurturRadio(
         if (engine.state.trip == null || !hasPermissions()) return
         startServer()
         startAdvertise()
+        startOpportunisticWatch()
     }
 
     @SuppressLint("MissingPermission")
     fun stopLoft() {
         scanJob?.cancel()
+        opportunisticJob?.cancel()
         feeding = false
+        opportunistic = false
         adapter?.bluetoothLeScanner?.stopScan(scanCallback)
         adapter?.bluetoothLeAdvertiser?.stopAdvertising(advertiseCallback)
         advertising = false
         activeGatts.forEach { runCatching { it.close() } }
         activeGatts.clear()
+        inRangeAddresses.clear()
         gattServer?.close()
         gattServer = null
+    }
+
+    /**
+     * Quiet background scan: when a flock peer appears, sync without tapping Feed.
+     * Cadence follows habitat (Wild is stingier).
+     */
+    @SuppressLint("MissingPermission")
+    private fun startOpportunisticWatch() {
+        if (opportunistic || !hasPermissions() || engine.state.trip == null) return
+        opportunistic = true
+        opportunisticJob?.cancel()
+        opportunisticJob = scope.launch {
+            while (opportunistic && engine.state.trip != null) {
+                if (!feeding) {
+                    val habitat = engine.state.trip!!.habitat
+                    inRangeAddresses.clear()
+                    val filters = listOf(
+                        ScanFilter.Builder().setServiceUuid(ParcelUuid(TurturUuids.SERVICE)).build(),
+                    )
+                    val mode = if (habitat == Habitat.CROWD) {
+                        ScanSettings.SCAN_MODE_BALANCED
+                    } else {
+                        ScanSettings.SCAN_MODE_LOW_POWER
+                    }
+                    val settings = ScanSettings.Builder().setScanMode(mode).build()
+                    runCatching {
+                        adapter?.bluetoothLeScanner?.startScan(filters, settings, scanCallback)
+                    }
+                    delay(habitat.opportunisticScanMs())
+                    if (!feeding) {
+                        runCatching { adapter?.bluetoothLeScanner?.stopScan(scanCallback) }
+                    }
+                    engine.setInRange(inRangeAddresses.size)
+                    onEngineChanged?.invoke()
+                    delay(habitat.opportunisticRestMs())
+                } else {
+                    delay(1_000)
+                }
+            }
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -247,9 +297,11 @@ class TurturRadio(
             val data = result.scanRecord?.getManufacturerSpecificData(TurturUuids.MANUFACTURER_ID)
             if (!engine.tripMatchesAdvert(data)) return
             val address = result.device.address ?: return
+            inRangeAddresses.add(address)
             val now = System.currentTimeMillis()
+            val cooldown = if (feeding) 10_000L else 30_000L
             val prev = seen[address] ?: 0
-            if (now - prev < 10_000) return
+            if (now - prev < cooldown) return
             seen[address] = now
             connectAsClient(result.device)
         }
@@ -498,6 +550,7 @@ class TurturRadio(
                     val give = json.decodeFromString<RadioGive>(line)
                     if (engine.ingestEnvelope(give.env)) {
                         takenCount.incrementAndGet()
+                        onEngineChanged?.invoke()
                         reply(
                             json.encodeToString(RadioGot(pigeonId = give.env.pigeonId)),
                             clientGatt,

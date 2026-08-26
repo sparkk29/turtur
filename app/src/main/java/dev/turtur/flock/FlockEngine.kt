@@ -279,7 +279,6 @@ class FlockEngine(private val store: TripStore) {
     }
 
     fun setInRange(count: Int) {
-        persist(state.copy(inRange = count), writeDisk = false)
         state = state.copy(inRange = count)
     }
 

@@ -18,6 +18,10 @@ enum class Habitat {
 
     /** Extra settle time after scan for GATT transfers during Feed. */
     fun feedSettleMs(): Long = if (this == WILD) 7_000 else 8_000
+
+    fun opportunisticScanMs(): Long = if (this == WILD) 4_000 else 5_000
+
+    fun opportunisticRestMs(): Long = if (this == WILD) 45_000 else 18_000
 }
 
 @Serializable

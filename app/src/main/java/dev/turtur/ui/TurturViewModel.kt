@@ -42,6 +42,11 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
     init {
         LoftRuntime.init(app)
         engine.load()
+        radio.onEngineChanged = {
+            viewModelScope.launch {
+                refresh(screen = _ui.value.screen)
+            }
+        }
         refresh(if (engine.state.trip == null) Screen.GATE else Screen.HOME)
         if (engine.state.trip != null) startRadioIfPossible()
     }

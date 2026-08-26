@@ -133,8 +133,13 @@ private fun Home(state: UiState, vm: TurturViewModel) {
             color = Copper,
         )
         Text(
-            if (state.loftLive) "Loft open · Bluetooth stays on with screen off"
-            else "Loft closed · grant Bluetooth to fly",
+            if (state.loftLive) {
+                val nearby = state.engine.inRange
+                if (nearby > 0) "Loft open · $nearby in range · syncing when birds pass"
+                else "Loft open · listening for flock (screen can be off)"
+            } else {
+                "Loft closed · grant Bluetooth to fly"
+            },
             color = if (state.loftLive) Moss else Wine,
         )
         Text(
