@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.turtur.LoftRuntime
 import dev.turtur.invite.InviteCodec
 import dev.turtur.model.FlightState
 import dev.turtur.model.Habitat
@@ -130,6 +131,11 @@ private fun Home(state: UiState, vm: TurturViewModel) {
         Text(
             "${trip.me.name} · ${trip.me.band} · ${trip.habitat.name.lowercase()} · ${trip.members.size} birds",
             color = Copper,
+        )
+        Text(
+            if (state.loftLive) "Loft open · Bluetooth stays on with screen off"
+            else "Loft closed · grant Bluetooth to fly",
+            color = if (state.loftLive) Moss else Wine,
         )
         Text(
             state.engine.lastFeedNote
@@ -240,7 +246,7 @@ private fun Wing(state: UiState, vm: TurturViewModel) {
 
 @Composable
 private fun Roster(state: UiState, vm: TurturViewModel) {
-    val invite = remember(state.engine.trip) { vm.engine.invite() }
+    val invite = remember(state.engine.trip) { LoftRuntime.engine.invite() }
     val bitmap: Bitmap? = remember(invite) { invite?.let { InviteCodec.qrBitmap(it) } }
     Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Back("Home") { vm.go(Screen.HOME) }

@@ -3,12 +3,10 @@ package dev.turtur.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import dev.turtur.LoftRuntime
 import dev.turtur.flock.EngineState
-import dev.turtur.flock.FlockEngine
 import dev.turtur.model.Habitat
 import dev.turtur.model.OkayStatus
-import dev.turtur.radio.TurturRadio
-import dev.turtur.store.TripStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -31,19 +29,21 @@ data class UiState(
     val meetupTime: String = "",
     val error: String? = null,
     val feeding: Boolean = false,
+    val loftLive: Boolean = false,
 )
 
 class TurturViewModel(app: Application) : AndroidViewModel(app) {
-    private val store = TripStore(app)
-    val engine = FlockEngine(store)
-    val radio = TurturRadio(app, engine, viewModelScope)
+    private val engine get() = LoftRuntime.engine
+    private val radio get() = LoftRuntime.radio
 
     private val _ui = MutableStateFlow(UiState())
     val ui: StateFlow<UiState> = _ui
 
     init {
+        LoftRuntime.init(app)
         engine.load()
         refresh(if (engine.state.trip == null) Screen.GATE else Screen.HOME)
+        if (engine.state.trip != null) startRadioIfPossible()
     }
 
     fun go(screen: Screen) {
@@ -62,7 +62,7 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
     fun createTrip() {
         runCatching {
             engine.createTrip(_ui.value.tripName, _ui.value.displayName, _ui.value.habitat)
-            radio.startLoft()
+            startRadioIfPossible()
             refresh(Screen.HOME)
         }.onFailure { show(it) }
     }
@@ -70,7 +70,7 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
     fun joinTrip() {
         runCatching {
             engine.joinTrip(_ui.value.inviteText, _ui.value.displayName)
-            radio.startLoft()
+            startRadioIfPossible()
             refresh(Screen.HOME)
         }.onFailure { show(it) }
     }
@@ -110,11 +110,17 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setHabitat(habitat: Habitat) {
         engine.setHabitat(habitat)
+        // Restart loft so advertise cadence can follow habitat later.
+        if (engine.state.trip != null) {
+            LoftRuntime.stopLoftService(getApplication())
+            startRadioIfPossible()
+        }
         refresh(Screen.SETTINGS)
     }
 
     fun feed() {
         _ui.update { it.copy(feeding = true, error = null) }
+        startRadioIfPossible()
         radio.feed { peers, given, taken ->
             viewModelScope.launch {
                 engine.markFed(peers, given, taken)
@@ -125,13 +131,20 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun molt() {
+        LoftRuntime.stopLoftService(getApplication())
         radio.stopLoft()
         engine.molt()
-        _ui.value = UiState(screen = Screen.GATE)
+        _ui.value = UiState(screen = Screen.GATE, loftLive = false)
     }
 
     fun startRadioIfPossible() {
-        if (radio.hasPermissions()) radio.startLoft()
+        if (engine.state.trip == null) return
+        if (!radio.hasPermissions()) {
+            _ui.update { it.copy(loftLive = false, error = "Turtur needs Bluetooth to fly.") }
+            return
+        }
+        LoftRuntime.startLoftService(getApplication())
+        _ui.update { it.copy(loftLive = true, error = null) }
     }
 
     fun refresh(screen: Screen = _ui.value.screen) {
@@ -139,6 +152,7 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
             it.copy(
                 screen = screen,
                 engine = engine.state,
+                loftLive = engine.state.trip != null && radio.hasPermissions(),
                 destLoftId = it.destLoftId
                     ?: engine.state.trip?.members?.firstOrNull { m ->
                         m.loftId != engine.state.trip?.me?.loftId
@@ -151,8 +165,8 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
         _ui.update { it.copy(error = t.message ?: t::class.java.simpleName) }
     }
 
+    /** Keep the loft service running across activity recreate; do not stop radio here. */
     override fun onCleared() {
-        radio.stopLoft()
         super.onCleared()
     }
 }

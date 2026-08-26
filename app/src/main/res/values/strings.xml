@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Turtur</string>
+    <string name="loft_channel_name">Loft radio</string>
+    <string name="loft_channel_desc">Keeps Bluetooth open so pigeons can fly while the screen is off.</string>
+    <string name="loft_notif_title">Turtur loft open</string>
+    <string name="loft_notif_body">%1$s · %2$d birds · Bluetooth on</string>
 </resources>

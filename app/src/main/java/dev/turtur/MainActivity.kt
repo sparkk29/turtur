@@ -21,11 +21,14 @@ class MainActivity : ComponentActivity() {
     private var cameraGranted by mutableStateOf(false)
 
     private val bluetoothPerms = if (Build.VERSION.SDK_INT >= 31) {
-        arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.BLUETOOTH_ADVERTISE,
-        )
+        buildList {
+            add(Manifest.permission.BLUETOOTH_SCAN)
+            add(Manifest.permission.BLUETOOTH_CONNECT)
+            add(Manifest.permission.BLUETOOTH_ADVERTISE)
+            if (Build.VERSION.SDK_INT >= 33) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }.toTypedArray()
     } else {
         arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
     }
