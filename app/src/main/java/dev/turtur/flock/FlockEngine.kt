@@ -355,6 +355,21 @@ class FlockEngine(private val store: TripStore) {
         )
     }
 
+    fun dropFromPocket(pigeonId: String) {
+        val trip = state.trip ?: return
+        // Never drop mail addressed to us that we somehow still hold sealed.
+        val next = state.pocket.filterNot {
+            it.pigeonId == pigeonId && it.destLoftId != trip.me.loftId
+        }
+        persist(state.copy(pocket = next))
+    }
+
+    fun pocketCarrying(): List<Envelope> {
+        expire()
+        val me = state.trip?.me ?: return emptyList()
+        return state.pocket.filter { it.destLoftId != me.loftId && now() <= it.ttlUnix }
+    }
+
     fun setInRange(count: Int) {
         state = state.copy(inRange = count)
     }

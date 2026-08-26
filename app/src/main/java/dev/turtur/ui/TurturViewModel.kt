@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    GATE, CREATE, JOIN, HOME, NOTE, MEETUP, OKAY, ARRIVALS, WING, ROSTER, SETTINGS,
+    GATE, CREATE, JOIN, HOME, NOTE, MEETUP, OKAY, ARRIVALS, WING, POCKET, ROSTER, SETTINGS,
 }
 
 data class UiState(
@@ -28,9 +28,11 @@ data class UiState(
     val destLoftId: String? = null,
     val meetupPlace: String = "",
     val meetupTime: String = "",
+    val ttlHours: Int? = null,
     val error: String? = null,
     val feeding: Boolean = false,
     val loftLive: Boolean = false,
+    val batteryHint: String = "",
 )
 
 class TurturViewModel(app: Application) : AndroidViewModel(app) {
@@ -73,6 +75,7 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
     fun onDest(v: String) = _ui.update { it.copy(destLoftId = v) }
     fun onPlace(v: String) = _ui.update { it.copy(meetupPlace = v) }
     fun onTime(v: String) = _ui.update { it.copy(meetupTime = v) }
+    fun onTtlHours(hours: Int?) = _ui.update { it.copy(ttlHours = hours) }
 
     fun createTrip() {
         runCatching {
@@ -103,7 +106,8 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
     fun releaseNote() {
         val dest = _ui.value.destLoftId ?: return
         runCatching {
-            engine.releaseNote(dest, _ui.value.noteText)
+            val ttlMs = _ui.value.ttlHours?.let { it * 3_600_000L }
+            engine.releaseNote(dest, _ui.value.noteText, ttlMs)
             _ui.update { it.copy(noteText = "") }
             refresh(Screen.HOME)
         }.onFailure { show(it) }
@@ -111,16 +115,23 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
 
     fun releaseMeetup() {
         runCatching {
-            engine.releaseMeetup(_ui.value.meetupPlace, _ui.value.meetupTime)
+            val ttlMs = _ui.value.ttlHours?.let { it * 3_600_000L }
+            engine.releaseMeetup(_ui.value.meetupPlace, _ui.value.meetupTime, ttlMs)
             refresh(Screen.HOME)
         }.onFailure { show(it) }
     }
 
     fun releaseOkay(status: OkayStatus) {
         runCatching {
-            engine.releaseOkay(status)
+            val ttlMs = _ui.value.ttlHours?.let { it * 3_600_000L }
+            engine.releaseOkay(status, ttlMs)
             refresh(Screen.HOME)
         }.onFailure { show(it) }
+    }
+
+    fun dropPigeon(pigeonId: String) {
+        engine.dropFromPocket(pigeonId)
+        refresh(Screen.POCKET)
     }
 
     fun setHabitat(habitat: Habitat) {
@@ -173,14 +184,21 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refresh(screen: Screen = _ui.value.screen) {
+        val trip = engine.state.trip
+        val hint = when (trip?.habitat) {
+            Habitat.CROWD -> "~3–6%/hr estimated with loft open (Crowd)"
+            Habitat.WILD -> "~1–3%/hr estimated with loft open (Wild)"
+            null -> ""
+        }
         _ui.update {
             it.copy(
                 screen = screen,
                 engine = engine.state,
-                loftLive = engine.state.trip != null && radio.hasPermissions(),
+                loftLive = trip != null && radio.hasPermissions(),
+                batteryHint = hint,
                 destLoftId = it.destLoftId
-                    ?: engine.state.trip?.members?.firstOrNull { m ->
-                        m.loftId != engine.state.trip?.me?.loftId
+                    ?: trip?.members?.firstOrNull { m ->
+                        m.loftId != trip.me.loftId
                     }?.loftId,
             )
         }

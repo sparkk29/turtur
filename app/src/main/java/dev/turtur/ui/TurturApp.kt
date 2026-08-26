@@ -72,6 +72,7 @@ fun TurturApp(state: UiState, vm: TurturViewModel, cameraGranted: Boolean, onNee
             Screen.OKAY -> Okay(vm)
             Screen.ARRIVALS -> Arrivals(state, vm)
             Screen.WING -> Wing(state, vm)
+            Screen.POCKET -> Pocket(state, vm)
             Screen.ROSTER -> Roster(state, vm)
             Screen.SETTINGS -> Settings(state, vm)
         }
@@ -147,6 +148,9 @@ private fun Home(state: UiState, vm: TurturViewModel) {
                 ?: "No flock in range. That's normal on the trail. Feed at camp.",
             color = Paper.copy(alpha = 0.75f),
         )
+        if (state.batteryHint.isNotBlank()) {
+            Text(state.batteryHint, color = Paper.copy(alpha = 0.55f))
+        }
         CopperButton(if (state.feeding) "Feeding…" else "Feed the flock", enabled = !state.feeding) {
             vm.feed()
         }
@@ -155,11 +159,17 @@ private fun Home(state: UiState, vm: TurturViewModel) {
             Tile("Meetup") { vm.go(Screen.MEETUP) }
             Tile("Okay") { vm.go(Screen.OKAY) }
         }
+        val carrying = state.engine.pocket.count { env ->
+            env.destLoftId != trip.me.loftId
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Tile("Arrivals (${state.engine.arrivals.size})") { vm.go(Screen.ARRIVALS) }
             Tile("On the wing (${state.engine.outbox.count { it.state == FlightState.ON_THE_WING }})") {
                 vm.go(Screen.WING)
             }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Tile("Pocket ($carrying)") { vm.go(Screen.POCKET) }
         }
         TextButton(onClick = { vm.go(Screen.ROSTER) }) { Text("Flock QR", color = Copper) }
         TextButton(onClick = { vm.go(Screen.SETTINGS) }) { Text("Trip settings", color = Copper) }
@@ -184,6 +194,7 @@ private fun Note(state: UiState, vm: TurturViewModel) {
             )
         }
         Field("Letter (500)", state.noteText, vm::onNote)
+        TtlPicker(state.ttlHours, vm::onTtlHours)
         CopperButton("Release") { vm.releaseNote() }
     }
 }
@@ -195,6 +206,7 @@ private fun Meetup(state: UiState, vm: TurturViewModel) {
         Text("Meetup", style = androidx.compose.material3.MaterialTheme.typography.headlineMedium, color = Paper)
         Field("Place (red banner, Hut 3)", state.meetupPlace, vm::onPlace)
         Field("Time (local)", state.meetupTime, vm::onTime)
+        TtlPicker(state.ttlHours, vm::onTtlHours)
         CopperButton("Release to flock") { vm.releaseMeetup() }
     }
 }
@@ -225,6 +237,37 @@ private fun Arrivals(state: UiState, vm: TurturViewModel) {
                 Text(kindLabel(item.kind), color = Copper)
                 Text(item.summary, color = Paper)
                 Text("$sender · ${prettyTime(item.landedUnix)}", color = Paper.copy(alpha = 0.55f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun Pocket(state: UiState, vm: TurturViewModel) {
+    val me = state.engine.trip?.me
+    val carrying = state.engine.pocket.filter { me != null && it.destLoftId != me.loftId }
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Back("Home") { vm.go(Screen.HOME) }
+        Text("Pocket flock", style = androidx.compose.material3.MaterialTheme.typography.headlineMedium, color = Paper)
+        Text(
+            "Sealed pigeons you are carrying for others. Set one down to stop ferrying it.",
+            color = Paper.copy(alpha = 0.7f),
+        )
+        if (carrying.isEmpty()) {
+            Text("Empty pocket. Nothing to carry.", color = Paper.copy(alpha = 0.7f))
+        }
+        carrying.forEach { env ->
+            val dest = state.engine.trip?.members?.find { it.loftId == env.destLoftId }
+            val leftH = ((env.ttlUnix - System.currentTimeMillis()) / 3_600_000L).coerceAtLeast(0)
+            Card {
+                Text("for ${dest?.name ?: "loft"} · ${dest?.band ?: "?"}", color = Copper)
+                Text("priority ${env.priority} · ~${leftH}h left · sealed", color = Paper.copy(alpha = 0.7f))
+                TextButton(onClick = { vm.dropPigeon(env.pigeonId) }) {
+                    Text("Set down", color = Wine)
+                }
             }
         }
     }
@@ -279,6 +322,9 @@ private fun Settings(state: UiState, vm: TurturViewModel) {
         Text("Trip settings", style = androidx.compose.material3.MaterialTheme.typography.headlineMedium, color = Paper)
         HabitatPicker(trip.habitat, vm::setHabitat)
         Text("Faster flight, worse battery, easier to notice.", color = Paper.copy(alpha = 0.65f))
+        if (state.batteryHint.isNotBlank()) {
+            Text(state.batteryHint, color = Copper)
+        }
         Text("End trip only molts this phone.", color = Paper.copy(alpha = 0.65f))
         CopperButton("End trip") { vm.molt() }
     }
@@ -311,6 +357,21 @@ private fun HabitatPicker(selected: Habitat, onSelect: (Habitat) -> Unit) {
                 selected = selected == habitat,
                 onClick = { onSelect(habitat) },
                 label = { Text(if (habitat == Habitat.WILD) "Wild" else "Crowd") },
+                colors = chipColors(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun TtlPicker(selectedHours: Int?, onSelect: (Int?) -> Unit) {
+    Text("Life of this pigeon", color = Paper.copy(alpha = 0.7f))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(null to "Default", 4 to "4h", 24 to "24h", 72 to "72h").forEach { (hours, label) ->
+            FilterChip(
+                selected = selectedHours == hours,
+                onClick = { onSelect(hours) },
+                label = { Text(label) },
                 colors = chipColors(),
             )
         }
