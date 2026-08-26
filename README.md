@@ -59,4 +59,15 @@ A live trip starts a **foreground loft service** so BLE advertising continues wi
 
 ```
 ./gradlew :app:assembleDebug
+./gradlew :app:test
 ```
+
+### Recent phases
+
+1. Foreground loft service  
+2. Harder Feed sync (peer names, transfer ACK, retries)  
+3. Opportunistic sync when peers appear  
+4. Signed roster gossip  
+5. Arrival notifications + Feed haptic  
+6. Pocket flock UI + TTL picker + battery hint  
+7. Crypto / TTL unit tests  
