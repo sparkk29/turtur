@@ -121,9 +121,15 @@ class TurturViewModel(app: Application) : AndroidViewModel(app) {
     fun feed() {
         _ui.update { it.copy(feeding = true, error = null) }
         startRadioIfPossible()
-        radio.feed { peers, given, taken ->
+        radio.feed { result ->
             viewModelScope.launch {
-                engine.markFed(peers, given, taken)
+                engine.markFed(
+                    peers = result.peers,
+                    given = result.given,
+                    taken = result.taken,
+                    peerNames = result.peerNames,
+                    failed = result.failedWrites,
+                )
                 refresh(screen = _ui.value.screen)
                 _ui.update { it.copy(feeding = false) }
             }

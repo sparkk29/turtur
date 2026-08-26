@@ -14,7 +14,10 @@ enum class Habitat {
 
     fun defaultTtlMs(): Long = if (this == WILD) 48L * 3600_000 else 8L * 3600_000
 
-    fun scanPeriodMs(): Long = if (this == WILD) 8_000 else 4_000
+    fun scanPeriodMs(): Long = if (this == WILD) 8_000 else 6_000
+
+    /** Extra settle time after scan for GATT transfers during Feed. */
+    fun feedSettleMs(): Long = if (this == WILD) 7_000 else 8_000
 }
 
 @Serializable

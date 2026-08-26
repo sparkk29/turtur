@@ -210,14 +210,21 @@ class FlockEngine(private val store: TripStore) {
         return true
     }
 
-    fun envelopesForPeer(peerLoftId: String): List<Envelope> {
+    fun envelopesForPeer(@Suppress("UNUSED_PARAMETER") peerLoftId: String): List<Envelope> {
         expire()
         val me = state.trip?.me ?: return emptyList()
+        // Epidemic among known birds: share any sealed pigeon still on the wing.
         return state.pocket.filter { env ->
             now() <= env.ttlUnix &&
                 env.destLoftId != me.loftId &&
-                (env.destLoftId == peerLoftId || isMember(env.destLoftId))
+                isMember(env.destLoftId)
         }.sortedByDescending { it.priority }
+    }
+
+    /** Pigeons already known here (pocket + landed), so peers skip re-sending them. */
+    fun knownPigeonIds(): List<String> {
+        expire()
+        return (state.pocket.map { it.pigeonId } + state.arrivals.map { it.pigeonId }).distinct()
     }
 
     fun mergeRoster(incoming: List<Member>) {
@@ -253,11 +260,14 @@ class FlockEngine(private val store: TripStore) {
         return serviceData.copyOf(8).contentEquals(tripAdvertHash())
     }
 
-    fun markFed(peers: Int, given: Int, taken: Int) {
-        val note = if (peers == 0) {
-            "No flock in range. That's normal on the trail. Feed at camp."
-        } else {
-            "$peers nearby · $given given · $taken taken"
+    fun markFed(peers: Int, given: Int, taken: Int, peerNames: List<String> = emptyList(), failed: Int = 0) {
+        val note = when {
+            peers == 0 -> "No flock in range. That's normal on the trail. Feed at camp."
+            else -> {
+                val who = if (peerNames.isEmpty()) "$peers nearby" else peerNames.joinToString(", ")
+                val fail = if (failed > 0) " · $failed write fails" else ""
+                "$who · $given given · $taken taken$fail"
+            }
         }
         persist(
             state.copy(

@@ -26,6 +26,7 @@ import android.os.Build
 import android.os.ParcelUuid
 import androidx.core.app.ActivityCompat
 import dev.turtur.flock.FlockEngine
+import dev.turtur.model.Envelope
 import dev.turtur.model.Member
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +38,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 private val json = Json {
     ignoreUnknownKeys = true
@@ -46,6 +48,7 @@ private val json = Json {
 object TurturUuids {
     val SERVICE: UUID = UUID.fromString("76320000-7254-7572-7475-724c6f667431")
     val MAIL: UUID = UUID.fromString("76320001-7254-7572-7475-724c6f667431")
+    val CCCD: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     const val MANUFACTURER_ID = 0xFFFF
 }
 
@@ -72,7 +75,27 @@ data class RadioHave(
 @Serializable
 data class RadioGive(
     val t: String = "give",
-    val env: dev.turtur.model.Envelope,
+    val env: Envelope,
+)
+
+@Serializable
+data class RadioGot(
+    val t: String = "got",
+    val pigeonId: String,
+)
+
+data class FeedResult(
+    val peers: Int,
+    val given: Int,
+    val taken: Int,
+    val peerNames: List<String> = emptyList(),
+    val failedWrites: Int = 0,
+)
+
+private data class WriteItem(
+    val characteristic: BluetoothGattCharacteristic,
+    val bytes: ByteArray,
+    val attempts: Int = 0,
 )
 
 class TurturRadio(
@@ -83,17 +106,21 @@ class TurturRadio(
     private val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private val adapter: BluetoothAdapter? get() = manager.adapter
     private var gattServer: BluetoothGattServer? = null
-    private var scanning = false
     private var advertising = false
     private var scanJob: Job? = null
-    var lastPeers: Int = 0
-        private set
-    var lastGiven: Int = 0
-        private set
-    var lastTaken: Int = 0
-        private set
+    private var feeding = false
 
+    private val givenCount = AtomicInteger(0)
+    private val takenCount = AtomicInteger(0)
+    private val failedWrites = AtomicInteger(0)
+    private val peerNames = ConcurrentHashMap.newKeySet<String>()
+    private val peerByAddress = ConcurrentHashMap<String, Member>()
+    private val peerHave = ConcurrentHashMap<String, Set<String>>()
     private val seen = ConcurrentHashMap<String, Long>()
+    private val pendingWrites = ConcurrentHashMap<BluetoothGatt, ArrayDeque<WriteItem>>()
+    private val writeBusy = ConcurrentHashMap<BluetoothGatt, Boolean>()
+    private val buffers = ConcurrentHashMap<String, StringBuilder>()
+    private val activeGatts = ConcurrentHashMap.newKeySet<BluetoothGatt>()
 
     fun hasPermissions(): Boolean {
         val needed = mutableListOf<String>()
@@ -119,30 +146,30 @@ class TurturRadio(
     @SuppressLint("MissingPermission")
     fun stopLoft() {
         scanJob?.cancel()
-        scanning = false
+        feeding = false
         adapter?.bluetoothLeScanner?.stopScan(scanCallback)
         adapter?.bluetoothLeAdvertiser?.stopAdvertising(advertiseCallback)
         advertising = false
+        activeGatts.forEach { runCatching { it.close() } }
+        activeGatts.clear()
         gattServer?.close()
         gattServer = null
     }
 
     @SuppressLint("MissingPermission")
-    fun feed(onDone: (peers: Int, given: Int, taken: Int) -> Unit) {
-        if (engine.state.trip == null) {
-            onDone(0, 0, 0)
+    fun feed(onDone: (FeedResult) -> Unit) {
+        if (engine.state.trip == null || !hasPermissions()) {
+            onDone(FeedResult(0, 0, 0))
             return
         }
-        if (!hasPermissions()) {
-            onDone(0, 0, 0)
-            return
-        }
-        lastPeers = 0
-        lastGiven = 0
-        lastTaken = 0
+        feeding = true
+        givenCount.set(0)
+        takenCount.set(0)
+        failedWrites.set(0)
+        peerNames.clear()
+        peerHave.clear()
         startLoft()
         val habitat = engine.state.trip!!.habitat
-        scanning = true
         val filters = listOf(
             ScanFilter.Builder().setServiceUuid(ParcelUuid(TurturUuids.SERVICE)).build(),
         )
@@ -152,14 +179,18 @@ class TurturRadio(
         adapter?.bluetoothLeScanner?.startScan(filters, settings, scanCallback)
         scanJob?.cancel()
         scanJob = scope.launch {
-            delay(habitat.scanPeriodMs())
+            delay(habitat.scanPeriodMs().coerceAtLeast(6_000))
             adapter?.bluetoothLeScanner?.stopScan(scanCallback)
-            scanning = false
-            delay(2_500)
-            val peers = lastPeers
-            val given = lastGiven
-            val taken = lastTaken
-            launch(Dispatchers.Main) { onDone(peers, given, taken) }
+            delay(habitat.feedSettleMs())
+            feeding = false
+            val result = FeedResult(
+                peers = peerNames.size,
+                given = givenCount.get(),
+                taken = takenCount.get(),
+                peerNames = peerNames.toList().sorted(),
+                failedWrites = failedWrites.get(),
+            )
+            launch(Dispatchers.Main) { onDone(result) }
         }
     }
 
@@ -173,7 +204,7 @@ class TurturRadio(
             .setTimeout(0)
             .build()
         val data = AdvertiseData.Builder()
-            .addManufacturerData(MANUFACTURER_ID, engine.tripAdvertHash())
+            .addManufacturerData(TurturUuids.MANUFACTURER_ID, engine.tripAdvertHash())
             .setIncludeDeviceName(false)
             .build()
         val scanResponse = AdvertiseData.Builder()
@@ -199,7 +230,7 @@ class TurturRadio(
         )
         mail.addDescriptor(
             BluetoothGattDescriptor(
-                UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"),
+                TurturUuids.CCCD,
                 BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE,
             ),
         )
@@ -212,15 +243,14 @@ class TurturRadio(
     private val scanCallback = object : ScanCallback() {
         @SuppressLint("MissingPermission")
         override fun onScanResult(callbackType: Int, result: ScanResult) {
-            val trip = engine.state.trip ?: return
+            if (engine.state.trip == null) return
             val data = result.scanRecord?.getManufacturerSpecificData(TurturUuids.MANUFACTURER_ID)
             if (!engine.tripMatchesAdvert(data)) return
             val address = result.device.address ?: return
             val now = System.currentTimeMillis()
             val prev = seen[address] ?: 0
-            if (now - prev < 8_000) return
+            if (now - prev < 10_000) return
             seen[address] = now
-            lastPeers += 1
             connectAsClient(result.device)
         }
     }
@@ -230,10 +260,12 @@ class TurturRadio(
         device.connectGatt(context, false, object : BluetoothGattCallback() {
             override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    activeGatts.add(gatt)
                     gatt.requestMtu(517)
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     pendingWrites.remove(gatt)
                     writeBusy.remove(gatt)
+                    activeGatts.remove(gatt)
                     gatt.close()
                 }
             }
@@ -245,7 +277,7 @@ class TurturRadio(
             override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
                 val ch = gatt.getService(TurturUuids.SERVICE)?.getCharacteristic(TurturUuids.MAIL) ?: return
                 gatt.setCharacteristicNotification(ch, true)
-                val cccd = ch.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"))
+                val cccd = ch.getDescriptor(TurturUuids.CCCD)
                 if (cccd != null) {
                     writeBusy[gatt] = true
                     if (Build.VERSION.SDK_INT >= 33) {
@@ -261,7 +293,15 @@ class TurturRadio(
                 }
             }
 
-            override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
+            override fun onCharacteristicWrite(
+                gatt: BluetoothGatt,
+                characteristic: BluetoothGattCharacteristic,
+                status: Int,
+            ) {
+                if (status != BluetoothGatt.GATT_SUCCESS) {
+                    requeueHead(gatt, characteristic)
+                    failedWrites.incrementAndGet()
+                }
                 writeBusy[gatt] = false
                 drainWrite(gatt)
             }
@@ -285,13 +325,16 @@ class TurturRadio(
 
     private fun queueHandshake(gatt: BluetoothGatt, ch: BluetoothGattCharacteristic) {
         val trip = engine.state.trip ?: return
-        writeLine(gatt, ch, json.encodeToString(RadioHello(tripId = trip.tripId, joinMac = engine.joinMacHex(), member = trip.me)))
+        writeLine(
+            gatt,
+            ch,
+            json.encodeToString(
+                RadioHello(tripId = trip.tripId, joinMac = engine.joinMacHex(), member = trip.me),
+            ),
+        )
         writeLine(gatt, ch, json.encodeToString(RadioRoster(members = trip.members)))
-        writeLine(gatt, ch, json.encodeToString(RadioHave(ids = engine.state.pocket.map { it.pigeonId })))
+        writeLine(gatt, ch, json.encodeToString(RadioHave(ids = engine.knownPigeonIds())))
     }
-
-    private val pendingWrites = ConcurrentHashMap<BluetoothGatt, ArrayDeque<Pair<BluetoothGattCharacteristic, ByteArray>>>()
-    private val writeBusy = ConcurrentHashMap<BluetoothGatt, Boolean>()
 
     @SuppressLint("MissingPermission")
     private fun writeLine(gatt: BluetoothGatt, ch: BluetoothGattCharacteristic, line: String) {
@@ -301,38 +344,61 @@ class TurturRadio(
             var i = 0
             while (i < payload.size) {
                 val end = minOf(i + 180, payload.size)
-                q.add(ch to payload.copyOfRange(i, end))
+                q.add(WriteItem(ch, payload.copyOfRange(i, end)))
                 i = end
             }
         }
         drainWrite(gatt)
     }
 
+    private fun requeueHead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+        val q = pendingWrites[gatt] ?: return
+        // Last drained item is already gone; we only bump failed count. Next drain continues.
+        // Re-push a sentinel retry by reading last failed bytes from characteristic if available.
+        val bytes = characteristic.value ?: return
+        synchronized(q) {
+            val attempts = 1
+            if (attempts < 3) {
+                q.addFirst(WriteItem(characteristic, bytes, attempts))
+            }
+        }
+    }
+
     @SuppressLint("MissingPermission")
     private fun drainWrite(gatt: BluetoothGatt) {
         val q = pendingWrites[gatt] ?: return
-        val next: Pair<BluetoothGattCharacteristic, ByteArray>?
+        val next: WriteItem?
         synchronized(q) {
             if (writeBusy[gatt] == true) return
             next = q.removeFirstOrNull()
             writeBusy[gatt] = next != null
         }
         if (next == null) return
-        val (ch, bytes) = next
         val ok = if (Build.VERSION.SDK_INT >= 33) {
-            gatt.writeCharacteristic(ch, bytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) == BluetoothGatt.GATT_SUCCESS
+            gatt.writeCharacteristic(
+                next.characteristic,
+                next.bytes,
+                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT,
+            ) == BluetoothGatt.GATT_SUCCESS
         } else {
             @Suppress("DEPRECATION")
-            ch.value = bytes
+            next.characteristic.value = next.bytes
             @Suppress("DEPRECATION")
-            gatt.writeCharacteristic(ch)
+            gatt.writeCharacteristic(next.characteristic)
         }
         if (!ok) {
+            if (next.attempts < 3) {
+                synchronized(q) { q.addFirst(next.copy(attempts = next.attempts + 1)) }
+            } else {
+                failedWrites.incrementAndGet()
+            }
             writeBusy[gatt] = false
+            scope.launch {
+                delay(120)
+                drainWrite(gatt)
+            }
         }
     }
-
-    private val buffers = ConcurrentHashMap<String, StringBuilder>()
 
     private fun appendAndDispatch(
         key: String,
@@ -346,7 +412,7 @@ class TurturRadio(
         while (buf.indexOf("\n").also { idx = it } >= 0) {
             val line = buf.substring(0, idx)
             buf.delete(0, idx + 1)
-            handleLine(line, clientGatt = clientGatt, serverDevice = serverDevice)
+            handleLine(line, key, clientGatt = clientGatt, serverDevice = serverDevice)
         }
     }
 
@@ -386,6 +452,7 @@ class TurturRadio(
     @SuppressLint("MissingPermission")
     private fun handleLine(
         line: String,
+        peerKey: String,
         clientGatt: BluetoothGatt? = null,
         serverDevice: BluetoothDevice? = null,
     ) {
@@ -396,8 +463,21 @@ class TurturRadio(
                 "\"t\":\"hello\"" in line -> {
                     val hello = json.decodeFromString<RadioHello>(line)
                     if (hello.tripId != trip.tripId) return
-                    engine.onJoinHello(hello.member, hello.joinMac)
+                    if (!engine.onJoinHello(hello.member, hello.joinMac)) return
                     engine.mergeRoster(listOf(hello.member))
+                    peerByAddress[peerKey] = hello.member
+                    peerNames.add("${hello.member.name} · ${hello.member.band}")
+                    // Reply so one-sided server contacts still exchange roster + inventory.
+                    reply(
+                        json.encodeToString(RadioRoster(members = engine.state.trip?.members.orEmpty())),
+                        clientGatt,
+                        serverDevice,
+                    )
+                    reply(
+                        json.encodeToString(RadioHave(ids = engine.knownPigeonIds())),
+                        clientGatt,
+                        serverDevice,
+                    )
                 }
                 "\"t\":\"roster\"" in line -> {
                     val roster = json.decodeFromString<RadioRoster>(line)
@@ -405,29 +485,49 @@ class TurturRadio(
                 }
                 "\"t\":\"have\"" in line -> {
                     val have = json.decodeFromString<RadioHave>(line)
-                    val give = engine.envelopesForPeer(trip.me.loftId)
+                    peerHave[peerKey] = have.ids.toSet()
+                    val peerLoft = peerByAddress[peerKey]?.loftId ?: trip.me.loftId
+                    val give = engine.envelopesForPeer(peerLoft)
                         .filter { it.pigeonId !in have.ids }
-                    lastGiven += give.size
+                        .take(24)
                     give.forEach { env ->
-                        notifyOrWrite(json.encodeToString(RadioGive(env = env)), clientGatt, serverDevice)
+                        reply(json.encodeToString(RadioGive(env = env)), clientGatt, serverDevice)
                     }
                 }
                 "\"t\":\"give\"" in line -> {
                     val give = json.decodeFromString<RadioGive>(line)
-                    if (engine.ingestEnvelope(give.env)) lastTaken += 1
+                    if (engine.ingestEnvelope(give.env)) {
+                        takenCount.incrementAndGet()
+                        reply(
+                            json.encodeToString(RadioGot(pigeonId = give.env.pigeonId)),
+                            clientGatt,
+                            serverDevice,
+                        )
+                    }
+                }
+                "\"t\":\"got\"" in line -> {
+                    val got = json.decodeFromString<RadioGot>(line)
+                    givenCount.incrementAndGet()
+                    // Peer confirmed they hold this pigeon; keep ours for other hops.
+                    peerHave.compute(peerKey) { _, old -> (old.orEmpty() + got.pigeonId) }
                 }
             }
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun notifyOrWrite(text: String, clientGatt: BluetoothGatt?, serverDevice: BluetoothDevice?) {
-        val bytes = (text + "\n").toByteArray()
+    private fun reply(text: String, clientGatt: BluetoothGatt?, serverDevice: BluetoothDevice?) {
         if (clientGatt != null) {
             val ch = clientGatt.getService(TurturUuids.SERVICE)?.getCharacteristic(TurturUuids.MAIL) ?: return
             writeLine(clientGatt, ch, text)
             return
         }
+        notifyServer(text, serverDevice)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun notifyServer(text: String, serverDevice: BluetoothDevice?) {
+        val bytes = (text + "\n").toByteArray(Charsets.UTF_8)
         val ch = gattServer?.getService(TurturUuids.SERVICE)?.getCharacteristic(TurturUuids.MAIL) ?: return
         var i = 0
         while (i < bytes.size) {
