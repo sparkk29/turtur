@@ -50,7 +50,7 @@ object ArrivalNotifier {
         }
         // Lock screen stays opaque; detail is in the app.
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_turtur)
             .setContentTitle(context.getString(R.string.arrival_notif_title))
             .setContentText(context.getString(R.string.arrival_notif_body, kind, senderName))
             .setContentIntent(open)

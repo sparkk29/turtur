@@ -1,73 +1,141 @@
-# turtur
+<p align="center">
+  <img src="assets/turtur-icon.svg" width="144" alt="Turtur logo: a turtle dove flying through a copper leg band">
+</p>
 
-Delay-tolerant, end-to-end sealed messaging for **festivals, trekkers, and hikers**.
+<h1 align="center">Turtur</h1>
 
-*Turtur* is Latin for the turtle dove (*Streptopelia turtur*). There is no chat server. Your phone is a loft. Other phones in your **trip flock** are the coops a pigeon can land in. A letter moves when people physically come into Bluetooth range — at camp, a hut kitchen, a trailhead, or a festival meeting point.
+<p align="center">
+  <b>Camp mail that flies in pockets.</b><br>
+  Offline, end-to-end sealed messaging for festivals, trekkers, and hikers.
+</p>
 
-Turtur wins when WhatsApp has no tower.
+<p align="center">
+  <img alt="Platform: Android" src="https://img.shields.io/badge/platform-Android-7A8A62">
+  <img alt="Min SDK 26" src="https://img.shields.io/badge/minSdk-26-C48A4A">
+  <img alt="Kotlin + Compose" src="https://img.shields.io/badge/Kotlin-Jetpack%20Compose-C48A4A">
+  <img alt="Transport: Bluetooth LE" src="https://img.shields.io/badge/transport-Bluetooth%20LE-1C1410">
+  <img alt="No servers" src="https://img.shields.io/badge/servers-none-1C1410">
+</p>
 
-**Tagline:** Camp mail that flies in pockets.
+---
+
+*Turtur* is Latin for the turtle dove (*Streptopelia turtur*). There is no chat server. Your phone is a **loft**. The other phones in your **trip flock** are the coops a pigeon can land in. A sealed letter moves when people physically come into Bluetooth range: at camp, a hut kitchen, a trailhead, or a festival meeting point.
+
+Turtur is built for the moments when WhatsApp has no tower.
+
+## How a letter travels
+
+Alex writes to Chris. They never stand near each other, but Blair passes both of them during the day.
+
+```mermaid
+flowchart LR
+    A["Alex's phone<br/>seals a Note for Chris"] -- "Bluetooth at the saddle" --> B["Blair's phone<br/>carries the sealed pigeon"]
+    B -- "Bluetooth at the hut" --> C["Chris's phone<br/>opens it and sends an ACK"]
+    C -. "ACK pigeon rides back" .-> B
+    B -.-> A
+```
+
+Blair's phone carries the letter but cannot read it. Only Chris's keys open it.
 
 ## Who it is for
 
 - Festival crews that split across stages and reunite at camp
-- Hut-to-hut trekkers who can wait until evening
-- Weekend hikers who miss a junction or straggle to the car
+- Hut-to-hut trekkers who can wait until evening for news
+- Weekend hikers who miss a junction or straggle back to the car
 
-## What the MVP does
+## Features
 
-- Start or join a **trip** by scanning a QR (no phone numbers)
-- Send a **Note** to one person in the flock
-- Send a **Meetup** (place + time) to everyone
-- Send **Okay** (I'm fine / delayed / stay put) to everyone
-- **Store-and-forward**: if the recipient is not nearby, another flock member carries the sealed pigeon until they are
-- **Feed the flock**: a manual burst sync when you are in camp
-- **End trip**: the loft molts (local trip data is wiped)
+**Trips and identity**
+- Start or join a **trip** by scanning a flock QR or pasting an invite. No phone numbers and no accounts.
+- Any member can show the QR to late joiners. Flocks are capped at 12 lofts.
+- Membership spreads by **signed roster gossip**, so mid-trip joiners learn everyone's keys as they meet people.
 
-## What the MVP does not do
+**Messages**
+- **Note**: up to 500 characters, sealed for one person.
+- **Meetup**: a place and a local time, sent to the whole flock.
+- **Okay**: *I'm fine*, *Delayed*, or *Stay put*, two taps away.
+- Pick how long each pigeon lives: the habitat default, or 4h, 24h, or 72h.
 
-No internet relay, no iOS, no photos, no live GPS, no public nearby chat, no mountain-rescue SOS, no carrying mail for strangers.
+**Delivery**
+- **Store-and-forward**: flock members carry sealed pigeons for each other until they reach the recipient or expire.
+- **Feed the flock**: a burst sync when you sit down together. It reports who was nearby and how many pigeons moved.
+- **Opportunistic sync**: a quiet background scan hands mail over when a flock member walks past, without tapping anything.
+- A **foreground loft service** keeps Bluetooth working with the screen off, so a phone in a pocket can still carry mail.
+- Honest status: *on the wing*, *landed* (after an ACK comes back), or *returned* (the pigeon expired before it landed). There are no fake read receipts.
+
+**On the phone**
+- **Arrival notifications** that keep content off the lock screen, plus a haptic on Feed.
+- **Pocket flock**: see the sealed pigeons you are carrying for others and set any of them down.
+- **Wild / Crowd habitat**: slow, battery-friendly radio for trails, or faster radio for festivals.
+- **End trip** wipes this phone's keys, roster, and mail.
+
+## Security model in one paragraph
+
+Each loft creates its own X25519 sealing key and Ed25519 signing key when it starts or joins a trip. Every pigeon is a sealed box to one recipient: an ephemeral X25519 exchange, HKDF-SHA256, then ChaCha20-Poly1305, with plaintext padded into fixed size bins. Inner payloads and roster updates are signed. Carriers can see envelope metadata (trip, destination loft, expiry, priority) but not content. Keys live in Android `EncryptedSharedPreferences`.
+
+Turtur is **not** an emergency beacon. Bluetooth radios are visible to anyone nearby, and mail can be late or never land. Read [`flaw.md`](flaw.md) before relying on it.
+
+## Getting started
+
+You need Android Studio with JDK 17, plus two or more Android phones with Bluetooth LE (Android 8.0 or newer).
+
+```
+./gradlew :app:assembleDebug   # build the debug APK
+./gradlew :app:test            # run the unit tests
+```
+
+Try the three-phone demo:
+
+1. Phone A taps **Start a trip**. Phones B and C scan A's flock QR.
+2. Grant Bluetooth and notification permissions. Each phone shows a "Turtur loft open" notification.
+3. Put all three phones in airplane mode with Bluetooth turned back on.
+4. Keep A and C apart. A sends C a Note.
+5. Bring B near A, then near C, and tap **Feed the flock** each time (or just wait for the background sync).
+6. C gets the letter, and A eventually sees it marked *landed*.
+
+## Project layout
+
+```
+app/src/main/java/dev/turtur/
+├── LoftRuntime.kt / LoftService.kt   process-wide loft and the foreground BLE service
+├── crypto/      sealed boxes, signatures, padding
+├── flock/       FlockEngine: trips, pigeons, roster, TTL, ACKs
+├── radio/       BLE advertise, scan, GATT sync protocol
+├── invite/      flock QR encode and decode
+├── notify/      arrival notifications and haptics
+├── store/       on-device storage
+├── model/       data types
+└── ui/          Jetpack Compose screens
+```
+
+## Docs
+
+| File | What's in it |
+| --- | --- |
+| [`discussion.md`](discussion.md) | Locked MVP decisions and the reasons behind them |
+| [`flow.md`](flow.md) | Screens and user flows |
+| [`flaw.md`](flaw.md) | Threat model, limits, and in-app warnings |
+| [`futureimplementation.md`](futureimplementation.md) | Roadmap: grounds, paper QR pigeons, courier mode, iOS |
 
 ## Vocabulary
 
-| Thing | Meaning |
+| Word | Meaning |
 | --- | --- |
-| Loft | This device's trip identity + keys |
-| Flock / trip | The bonded group (max 12) |
+| Loft | This phone's trip identity and keys |
+| Flock / trip | The bonded group, up to 12 lofts |
 | Pigeon | One sealed packet in transit |
-| On the wing | Not delivered yet; sitting in someone's pocket |
-| Arrivals | Mail that decrypted on this device |
-| Feed the flock | Sync with phones in range now |
-| Molt | End trip and wipe |
+| On the wing | Sent but not confirmed landed |
+| Pocket | Sealed pigeons you carry for others |
+| Arrivals | Mail that opened on this phone |
+| Feed the flock | Sync with phones in range right now |
+| Molt | End the trip and wipe this phone |
 
-## Magic demo (success criteria)
+## The logo
 
-Three Android phones. Airplane mode (Bluetooth on). A writes to C. B walks between them. At dinner, C has the letter. No cell, no Wi-Fi network, no server.
+The mark is a turtle dove, with the striped neck patch that gives the species away, flying through a copper **leg band**. Homing pigeons wear bands that say which loft they belong to. In Turtur, the band is your loft identity, and the dove is the letter finding its way home.
 
-## Repo
+| Ink | Paper | Copper | Moss |
+| --- | --- | --- | --- |
+| `#1C1410` | `#F3EBDD` | `#C48A4A` | `#7A8A62` |
 
-- Decisions: [`discussion.md`](discussion.md)
-- Screens and flows: [`flow.md`](flow.md)
-- Threats and warnings: [`flaw.md`](flaw.md)
-- Deferred work: [`futureimplementation.md`](futureimplementation.md)
-
-## Build
-
-Android (Kotlin + Jetpack Compose). Open the project in Android Studio. Min SDK 26.
-
-A live trip starts a **foreground loft service** so BLE advertising continues with the screen off (required for carry while hiking).
-
-```
-./gradlew :app:assembleDebug
-./gradlew :app:test
-```
-
-### Recent phases
-
-1. Foreground loft service  
-2. Harder Feed sync (peer names, transfer ACK, retries)  
-3. Opportunistic sync when peers appear  
-4. Signed roster gossip  
-5. Arrival notifications + Feed haptic  
-6. Pocket flock UI + TTL picker + battery hint  
-7. Crypto / TTL unit tests  
+The source artwork is [`assets/turtur-icon.svg`](assets/turtur-icon.svg). On Android it ships as an adaptive launcher icon with a themed monochrome layer and a matching status-bar silhouette.

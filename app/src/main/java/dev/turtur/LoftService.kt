@@ -74,7 +74,7 @@ class LoftService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_turtur)
             .setContentTitle(getString(R.string.loft_notif_title))
             .setContentText(getString(R.string.loft_notif_body, tripName, birdCount))
             .setContentIntent(open)
