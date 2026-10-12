@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="assets/turtur-icon.svg" width="144" alt="Turtur logo: a turtle dove flying through a glacier-teal leg band">
+  <img src="assets/turtur-banner.png" width="100%" alt="Turtur: camp mail that flies in pockets. Sealed letters hop phone to phone over Bluetooth, plus a best-effort SOS beacon. Shown with the Home, SOS, and Finder screens.">
 </p>
 
 <h1 align="center">Turtur</h1>
 
 <p align="center">
   <b>Camp mail that flies in pockets.</b><br>
-  Offline, end-to-end sealed messaging for festivals, trekkers, and hikers.
+  Offline, end-to-end sealed messaging and a Bluetooth SOS beacon for festivals, trekkers, and hikers.
 </p>
 
 <p align="center">
@@ -22,12 +22,6 @@
 *Turtur* is Latin for the turtle dove (*Streptopelia turtur*). There is no chat server. Your phone is a **loft**. The other phones in your **trip flock** are the coops a pigeon can land in. A sealed letter moves when people physically come into Bluetooth range: at camp, a hut kitchen, a trailhead, or a festival meeting point.
 
 Turtur is built for the moments when WhatsApp has no tower.
-
-<p align="center">
-  <img src="docs/screenshots/home.png" width="200" alt="Trip home screen">
-  <img src="docs/screenshots/sos-active.png" width="200" alt="SOS beacon on">
-  <img src="docs/screenshots/finder.png" width="200" alt="Finder walking toward an SOS">
-</p>
 
 <p align="center">
   <a href="dist/turtur-0.1.0.apk"><b>Download the APK</b></a> · Android 8.0+ · <a href="#install-the-apk">install notes</a> · <a href="#screenshots">more screenshots</a>
@@ -102,9 +96,9 @@ Getting started:
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/gate.png" width="200" alt="Gate screen"><br><sub>Gate: how it works, then start or join a trip. SOS works without one.</sub></td>
-    <td align="center"><img src="docs/screenshots/warning.png" width="200" alt="Before you fly"><br><sub>Before you fly: five things to know</sub></td>
-    <td align="center"><img src="docs/screenshots/home.png" width="200" alt="Trip home"><br><sub>Trip home: loft status, mail, and safety</sub></td>
+    <td align="center"><img src="docs/screens/gate.png" width="200" alt="Gate screen"><br><sub>Gate: how it works, then start or join a trip. SOS works without one.</sub></td>
+    <td align="center"><img src="docs/screens/warning.png" width="200" alt="Before you fly"><br><sub>Before you fly: five things to know</sub></td>
+    <td align="center"><img src="docs/screens/home.png" width="200" alt="Trip home"><br><sub>Trip home: loft status, mail, and safety</sub></td>
   </tr>
 </table>
 
@@ -112,8 +106,8 @@ Safety setup:
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/safety.png" width="200" alt="Safety screen"><br><sub>Safety: SOS name, Good Samaritan, contacts</sub></td>
-    <td align="center"><img src="docs/screenshots/safety-card.png" width="200" alt="Guardian card"><br><sub>Your guardian card QR</sub></td>
+    <td align="center"><img src="docs/screens/safety.png" width="200" alt="Safety screen"><br><sub>Safety: SOS name, Good Samaritan, contacts</sub></td>
+    <td align="center"><img src="docs/screens/safety-card.png" width="200" alt="Guardian card"><br><sub>Your guardian card QR</sub></td>
   </tr>
 </table>
 
@@ -121,8 +115,8 @@ The hiker who needs help:
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/sos-idle.png" width="200" alt="SOS screen before activation"><br><sub>Call 112 first, or hold 3 s for the beacon</sub></td>
-    <td align="center"><img src="docs/screenshots/sos-active.png" width="200" alt="SOS beacon on"><br><sub>Beacon on with a signed GPS fix</sub></td>
+    <td align="center"><img src="docs/screens/sos-idle.png" width="200" alt="SOS screen before activation"><br><sub>Call 112 first, or hold 3 s for the beacon</sub></td>
+    <td align="center"><img src="docs/screens/sos-active.png" width="200" alt="SOS beacon on"><br><sub>Beacon on with a signed GPS fix</sub></td>
   </tr>
 </table>
 
@@ -130,10 +124,10 @@ The Turtur user who walks past:
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/alert.png" width="200" alt="SOS alert notification"><br><sub>Loud alert, plus a reminder to text contacts</sub></td>
-    <td align="center"><img src="docs/screenshots/heard.png" width="200" alt="SOS heard list"><br><sub>Heard: every SOS this phone picked up</sub></td>
-    <td align="center"><img src="docs/screenshots/finder.png" width="200" alt="Finder"><br><sub>Finder: hot/cold signal and distance/bearing</sub></td>
-    <td align="center"><img src="docs/screenshots/sms.png" width="200" alt="Prefilled SMS"><br><sub>SMS bridge: prefilled text to the hiker's contacts</sub></td>
+    <td align="center"><img src="docs/screens/alert.png" width="200" alt="SOS alert notification"><br><sub>Loud alert, plus a reminder to text contacts</sub></td>
+    <td align="center"><img src="docs/screens/heard.png" width="200" alt="SOS heard list"><br><sub>Heard: every SOS this phone picked up</sub></td>
+    <td align="center"><img src="docs/screens/finder.png" width="200" alt="Finder"><br><sub>Finder: hot/cold signal and distance/bearing</sub></td>
+    <td align="center"><img src="docs/screens/sms.png" width="200" alt="Prefilled SMS"><br><sub>SMS bridge: prefilled text to the hiker's contacts</sub></td>
   </tr>
 </table>
 
@@ -143,7 +137,7 @@ These were captured on Android 14 and 15 emulators with simulated Bluetooth. The
 
 [`dist/turtur-0.1.0.apk`](dist/turtur-0.1.0.apk) is a **debug build** (version 0.1.0, about 24 MB) for Android 8.0 or newer.
 
-SHA-256: `5f8966cd8c724b952d17927253fc39fdb745e2606e7d6d81af6899bea24faf0e`
+SHA-256: `aa0073f0a962fe488ebf2a02eaf59c9289575cdb00be4fbe07d74d3a4e01ed11`
 
 1. Copy the APK to the phone, or install it from a computer with `adb install dist/turtur-0.1.0.apk`.
 2. When Android asks, allow your file manager or browser to install unknown apps.
@@ -192,8 +186,9 @@ app/src/main/java/dev/turtur/
 ├── model/       data types
 └── ui/          Jetpack Compose screens
 
+assets/              logo and README banner
 dist/                prebuilt debug APK
-docs/screenshots/    README screenshots
+docs/screens/        README screenshots
 ```
 
 ## Docs
@@ -220,7 +215,9 @@ docs/screenshots/    README screenshots
 
 ## The logo
 
-The mark is a turtle dove, with the striped neck patch that gives the species away, flying through a glacier-teal **leg band**. Homing pigeons wear bands that say which loft they belong to. In Turtur, the band is your loft identity, and the dove is the letter finding its way home.
+<img src="assets/turtur-logo.svg" width="120" align="right" alt="Turtur logo: a turtle dove breaking out of a glacier-teal leg band above a snow-capped ridge at night">
+
+The mark is a turtle dove, with the striped neck patch that gives the species away, flying up and out of a glacier-teal **leg band** over a snow-capped ridge at night. Homing pigeons wear bands that say which loft they belong to. In Turtur, the band is your loft identity, and the dove is the letter leaving the camp and finding its way home.
 
 The app uses an "Alpine night" palette: a dark slate background that is easy on the eyes at camp, teal for actions, and signal orange kept only for SOS.
 
@@ -229,4 +226,4 @@ The app uses an "Alpine night" palette: a dark slate background that is easy on 
 | `#0F1720` | `#E8EEF2` | `#4FC3B8` | `#FF7A3D` | `#7CC79A` |
 | Background | Text and the dove | Actions and the band | SOS only | Safe and verified |
 
-The source artwork is [`assets/turtur-icon.svg`](assets/turtur-icon.svg). On Android it ships as an adaptive launcher icon with a themed monochrome layer and a matching status-bar silhouette.
+The source artwork is [`assets/turtur-logo.svg`](assets/turtur-logo.svg), and the banner at the top of this page is [`assets/turtur-banner.png`](assets/turtur-banner.png). On Android the logo ships as an adaptive launcher icon with a themed monochrome layer and a matching status-bar silhouette.

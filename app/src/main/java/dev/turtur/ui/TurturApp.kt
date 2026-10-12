@@ -138,9 +138,9 @@ private fun Gate(state: UiState, vm: TurturViewModel) {
             Image(
                 painter = painterResource(R.drawable.ic_launcher_foreground),
                 contentDescription = null,
-                modifier = Modifier.size(64.dp),
+                modifier = Modifier.size(92.dp),
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(2.dp))
             Column {
                 Text("Turtur", style = MaterialTheme.typography.displaySmall)
                 Text("Camp mail that flies in pockets.", style = MaterialTheme.typography.bodyMedium, color = Glacier)

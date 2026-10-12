@@ -9,13 +9,24 @@
         android:pivotY="54"
         android:scaleX="0.87"
         android:scaleY="0.87">
+        <group>
+            <clip-path android:pathData="M54,27 a27,27 0 1,1 0,54 a27,27 0 1,1 0,-54" />
+            <path
+                android:fillColor="#FFFFFFFF"
+                android:pathData="M24,74 L32,68 L37,70 L46,62 L56,71 L64,66 L84,76 V90 H24 Z" />
+        </group>
         <path
-            android:pathData="M54,27 a29,29 0 1,1 0,58 a29,29 0 1,1 0,-58"
+            android:pathData="M54,27 a27,27 0 1,1 0,54 a27,27 0 1,1 0,-54"
             android:strokeWidth="5"
             android:strokeColor="#FFFFFFFF" />
         <group
-            android:translateX="-1"
-            android:translateY="5">
+            android:pivotX="52"
+            android:pivotY="42"
+            android:rotation="-10"
+            android:scaleX="0.8"
+            android:scaleY="0.8"
+            android:translateX="7.2"
+            android:translateY="-4.7">
             <path
                 android:fillColor="#FFFFFFFF"
                 android:pathData="M84,46 L79.5,43.2 C78.5,38 71,37 68.5,41.5 C67,44.5 64,47.5 58,49.5 C50,52 44,54.5 38,56.5 L21,56 Q18.8,59 21.6,61.6 Q19.4,64.6 22.6,67.4 L39,63.5 C47,66.5 60,66 69,60.5 C74,57.5 77.5,52 79.5,48.5 C81,47.5 82.5,46.8 84,46 Z" />
