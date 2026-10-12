@@ -42,7 +42,7 @@ object InviteCodec {
         val pixels = IntArray(size * size) { i ->
             val x = i % size
             val y = i / size
-            if (bitMatrix.get(x, y)) 0xFF1C1410.toInt() else 0xFFF3EBDD.toInt()
+            if (bitMatrix.get(x, y)) 0xFF0F1720.toInt() else 0xFFE8EEF2.toInt()
         }
         return Bitmap.createBitmap(pixels, size, size, Bitmap.Config.ARGB_8888)
     }

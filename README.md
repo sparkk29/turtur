@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/turtur-icon.svg" width="144" alt="Turtur logo: a turtle dove flying through a copper leg band">
+  <img src="assets/turtur-icon.svg" width="144" alt="Turtur logo: a turtle dove flying through a glacier-teal leg band">
 </p>
 
 <h1 align="center">Turtur</h1>
@@ -10,11 +10,11 @@
 </p>
 
 <p align="center">
-  <img alt="Platform: Android" src="https://img.shields.io/badge/platform-Android-7A8A62">
-  <img alt="Min SDK 26" src="https://img.shields.io/badge/minSdk-26-C48A4A">
-  <img alt="Kotlin + Compose" src="https://img.shields.io/badge/Kotlin-Jetpack%20Compose-C48A4A">
-  <img alt="Transport: Bluetooth LE" src="https://img.shields.io/badge/transport-Bluetooth%20LE-1C1410">
-  <img alt="No servers" src="https://img.shields.io/badge/servers-none-1C1410">
+  <img alt="Platform: Android" src="https://img.shields.io/badge/platform-Android-7CC79A">
+  <img alt="Min SDK 26" src="https://img.shields.io/badge/minSdk-26-4FC3B8">
+  <img alt="Kotlin + Compose" src="https://img.shields.io/badge/Kotlin-Jetpack%20Compose-4FC3B8">
+  <img alt="Transport: Bluetooth LE" src="https://img.shields.io/badge/transport-Bluetooth%20LE-0F1720">
+  <img alt="No servers" src="https://img.shields.io/badge/servers-none-0F1720">
 </p>
 
 ---
@@ -98,12 +98,20 @@ Turtur is **not** a replacement for 112, a personal locator beacon, or satellite
 
 ## Screenshots
 
-Trips and safety setup:
+Getting started:
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/gate.png" width="200" alt="Gate screen"><br><sub>Gate: start or join a trip. SOS works without one.</sub></td>
-    <td align="center"><img src="docs/screenshots/home.png" width="200" alt="Trip home"><br><sub>Trip home with the SOS row</sub></td>
+    <td align="center"><img src="docs/screenshots/gate.png" width="200" alt="Gate screen"><br><sub>Gate: how it works, then start or join a trip. SOS works without one.</sub></td>
+    <td align="center"><img src="docs/screenshots/warning.png" width="200" alt="Before you fly"><br><sub>Before you fly: five things to know</sub></td>
+    <td align="center"><img src="docs/screenshots/home.png" width="200" alt="Trip home"><br><sub>Trip home: loft status, mail, and safety</sub></td>
+  </tr>
+</table>
+
+Safety setup:
+
+<table>
+  <tr>
     <td align="center"><img src="docs/screenshots/safety.png" width="200" alt="Safety screen"><br><sub>Safety: SOS name, Good Samaritan, contacts</sub></td>
     <td align="center"><img src="docs/screenshots/safety-card.png" width="200" alt="Guardian card"><br><sub>Your guardian card QR</sub></td>
   </tr>
@@ -129,13 +137,13 @@ The Turtur user who walks past:
   </tr>
 </table>
 
-These were captured on two Android 15 emulators with simulated Bluetooth. The signal strength in the Finder is virtual, and the phone numbers and location are made up.
+These were captured on Android 14 and 15 emulators with simulated Bluetooth. The signal strength in the Finder is virtual, and the phone numbers and location are made up.
 
 ## Install the APK
 
 [`dist/turtur-0.1.0.apk`](dist/turtur-0.1.0.apk) is a **debug build** (version 0.1.0, about 24 MB) for Android 8.0 or newer.
 
-SHA-256: `7d286ab56542b095a5a183d08abd1f7a10f55c3fe04500d34c6bbf23cf20f820`
+SHA-256: `5f8966cd8c724b952d17927253fc39fdb745e2606e7d6d81af6899bea24faf0e`
 
 1. Copy the APK to the phone, or install it from a computer with `adb install dist/turtur-0.1.0.apk`.
 2. When Android asks, allow your file manager or browser to install unknown apps.
@@ -163,7 +171,7 @@ Try the three-phone demo:
 
 Try the SOS beacon with two phones (no trip needed):
 
-1. On both phones open **Safety**, save a name, and scan each other's guardian card. On phone B turn on **Listen for SOS from any Turtur user**.
+1. On both phones open **Safety**, save a name, and scan each other's guardian card. On phone B turn on **Listen for SOS from anyone**.
 2. On phone A add an emergency contact with a phone number, allow location, then hold **SOS** for 3 seconds.
 3. Phone B rings with "SOS from A nearby". Tap it to open the finder and walk around to watch the meter.
 4. On B tap **Text contacts**: the SMS app opens with A's location prefilled.
@@ -212,10 +220,13 @@ docs/screenshots/    README screenshots
 
 ## The logo
 
-The mark is a turtle dove, with the striped neck patch that gives the species away, flying through a copper **leg band**. Homing pigeons wear bands that say which loft they belong to. In Turtur, the band is your loft identity, and the dove is the letter finding its way home.
+The mark is a turtle dove, with the striped neck patch that gives the species away, flying through a glacier-teal **leg band**. Homing pigeons wear bands that say which loft they belong to. In Turtur, the band is your loft identity, and the dove is the letter finding its way home.
 
-| Ink | Paper | Copper | Moss |
-| --- | --- | --- | --- |
-| `#1C1410` | `#F3EBDD` | `#C48A4A` | `#7A8A62` |
+The app uses an "Alpine night" palette: a dark slate background that is easy on the eyes at camp, teal for actions, and signal orange kept only for SOS.
+
+| Night | Snow | Glacier | Signal | Pine |
+| --- | --- | --- | --- | --- |
+| `#0F1720` | `#E8EEF2` | `#4FC3B8` | `#FF7A3D` | `#7CC79A` |
+| Background | Text and the dove | Actions and the band | SOS only | Safe and verified |
 
 The source artwork is [`assets/turtur-icon.svg`](assets/turtur-icon.svg). On Android it ships as an adaptive launcher icon with a themed monochrome layer and a matching status-bar silhouette.

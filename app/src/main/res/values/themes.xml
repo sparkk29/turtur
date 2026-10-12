@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Turtur" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">#1C1410</item>
-        <item name="android:navigationBarColor">#1C1410</item>
-        <item name="android:windowBackground">#1C1410</item>
+        <item name="android:statusBarColor">@color/turtur_night</item>
+        <item name="android:navigationBarColor">@color/turtur_night</item>
+        <item name="android:windowBackground">@color/turtur_night</item>
     </style>
 </resources>
