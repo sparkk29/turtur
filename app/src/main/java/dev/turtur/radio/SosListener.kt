@@ -3,12 +3,15 @@ package dev.turtur.radio
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanSettings
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.ParcelUuid
@@ -39,6 +42,29 @@ object SosListener {
     fun sync(context: Context) {
         LoftRuntime.init(context)
         if (shouldListen() && hasScanPermission(context)) start(context) else stop(context)
+    }
+
+    private var bluetoothWatch: BroadcastReceiver? = null
+
+    /** The stack drops PendingIntent scans when Bluetooth restarts; re-arm when it comes back. */
+    fun watchBluetooth(context: Context) {
+        if (bluetoothWatch != null) return
+        val app = context.applicationContext
+        val receiver = onBluetoothOn { sync(app) }
+        ContextCompat.registerReceiver(
+            app,
+            receiver,
+            IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        bluetoothWatch = receiver
+    }
+
+    fun onBluetoothOn(action: () -> Unit) = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
+            if (state == BluetoothAdapter.STATE_ON) action()
+        }
     }
 
     fun filters(): List<ScanFilter> =

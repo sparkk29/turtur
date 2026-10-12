@@ -9,6 +9,7 @@
 .externalNativeBuild
 .cxx
 *.apk
+!/dist/*.apk
 *.aab
 *.ap_
 keystore.properties

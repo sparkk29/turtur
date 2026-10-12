@@ -9,6 +9,7 @@ class TurturApplication : Application() {
         super.onCreate()
         LoftRuntime.init(this)
         SosListener.sync(this)
+        SosListener.watchBluetooth(this)
         SmsBridge.refreshCarrying(this)
     }
 }

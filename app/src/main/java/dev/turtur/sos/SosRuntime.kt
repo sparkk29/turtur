@@ -115,6 +115,12 @@ object SosRuntime {
         startService(context, SosService.ACTION_START)
     }
 
+    /** Bring a still-active beacon back after a reboot or app update. */
+    fun resume(context: Context) {
+        if (_state.value.active == null) return
+        startService(context, SosService.ACTION_START)
+    }
+
     fun cancelSos(context: Context) {
         val active = _state.value.active ?: return
         if (active.record.cancelled) return

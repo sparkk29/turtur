@@ -23,6 +23,16 @@
 
 Turtur is built for the moments when WhatsApp has no tower.
 
+<p align="center">
+  <img src="docs/screenshots/home.png" width="200" alt="Trip home screen">
+  <img src="docs/screenshots/sos-active.png" width="200" alt="SOS beacon on">
+  <img src="docs/screenshots/finder.png" width="200" alt="Finder walking toward an SOS">
+</p>
+
+<p align="center">
+  <a href="dist/turtur-0.1.0-debug.apk"><b>Download the APK</b></a> · Android 8.0+ · <a href="#install-the-apk">install notes</a> · <a href="#screenshots">more screenshots</a>
+</p>
+
 ## How a letter travels
 
 Alex writes to Chris. They never stand near each other, but Blair passes both of them during the day.
@@ -86,9 +96,56 @@ The SOS beacon uses a separate, long-lived Ed25519 key that survives **End trip*
 
 Turtur is **not** a replacement for 112, a personal locator beacon, or satellite SOS. The SOS beacon reaches **only Turtur phones within Bluetooth range** (tens of metres, a few hundred on phones with long-range Bluetooth), and it never reaches phones without Turtur. Mail can be late or never land. Read [`flaw.md`](flaw.md) before relying on it.
 
+## Screenshots
+
+Trips and safety setup:
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/gate.png" width="200" alt="Gate screen"><br><sub>Gate: start or join a trip. SOS works without one.</sub></td>
+    <td align="center"><img src="docs/screenshots/home.png" width="200" alt="Trip home"><br><sub>Trip home with the SOS row</sub></td>
+    <td align="center"><img src="docs/screenshots/safety.png" width="200" alt="Safety screen"><br><sub>Safety: SOS name, Good Samaritan, contacts</sub></td>
+    <td align="center"><img src="docs/screenshots/safety-card.png" width="200" alt="Guardian card"><br><sub>Your guardian card QR</sub></td>
+  </tr>
+</table>
+
+The hiker who needs help:
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/sos-idle.png" width="200" alt="SOS screen before activation"><br><sub>Call 112 first, or hold 3 s for the beacon</sub></td>
+    <td align="center"><img src="docs/screenshots/sos-active.png" width="200" alt="SOS beacon on"><br><sub>Beacon on with a signed GPS fix</sub></td>
+  </tr>
+</table>
+
+The Turtur user who walks past:
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/alert.png" width="200" alt="SOS alert notification"><br><sub>Loud alert, plus a reminder to text contacts</sub></td>
+    <td align="center"><img src="docs/screenshots/heard.png" width="200" alt="SOS heard list"><br><sub>Heard: every SOS this phone picked up</sub></td>
+    <td align="center"><img src="docs/screenshots/finder.png" width="200" alt="Finder"><br><sub>Finder: hot/cold signal and distance/bearing</sub></td>
+    <td align="center"><img src="docs/screenshots/sms.png" width="200" alt="Prefilled SMS"><br><sub>SMS bridge: prefilled text to the hiker's contacts</sub></td>
+  </tr>
+</table>
+
+These were captured on two Android 15 emulators with simulated Bluetooth. The signal strength in the Finder is virtual, and the phone numbers and location are made up.
+
+## Install the APK
+
+[`dist/turtur-0.1.0-debug.apk`](dist/turtur-0.1.0-debug.apk) is a **debug build** (version 0.1.0, about 24 MB) for Android 8.0 or newer.
+
+SHA-256: `7d286ab56542b095a5a183d08abd1f7a10f55c3fe04500d34c6bbf23cf20f820`
+
+1. Copy the APK to the phone, or install it from a computer with `adb install dist/turtur-0.1.0-debug.apk`.
+2. When Android asks, allow your file manager or browser to install unknown apps.
+3. On first launch, allow Bluetooth and notifications. Allow location when you set up SOS so the beacon can include a GPS fix.
+
+The debug build is signed with a local debug key, so it won't update over a Play Store or release build of Turtur. Uninstall first if Android reports a signature conflict. To build your own, see the next section.
+
 ## Getting started
 
-You need Android Studio with JDK 17, plus two or more Android phones with Bluetooth LE (Android 8.0 or newer).
+You need Android Studio with JDK 17, plus two or more Android phones with Bluetooth LE (Android 8.0 or newer). To skip the build, install the [prebuilt APK](#install-the-apk) on each phone.
 
 ```
 ./gradlew :app:assembleDebug   # build the debug APK
@@ -126,6 +183,9 @@ app/src/main/java/dev/turtur/
 ├── store/       on-device storage (trip store and the guardian store)
 ├── model/       data types
 └── ui/          Jetpack Compose screens
+
+dist/                prebuilt debug APK
+docs/screenshots/    README screenshots
 ```
 
 ## Docs

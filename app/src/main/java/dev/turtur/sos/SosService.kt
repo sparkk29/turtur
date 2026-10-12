@@ -1,14 +1,18 @@
 package dev.turtur.sos
 
 import android.app.Service
+import android.bluetooth.BluetoothAdapter
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 import dev.turtur.LoftRuntime
 import dev.turtur.model.ActiveSos
 import dev.turtur.radio.SosBeacon
+import dev.turtur.radio.SosListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,6 +39,16 @@ class SosService : Service() {
         LoftRuntime.init(this)
         SosNotifier.ensureChannels(this)
         beacon = SosBeacon(this)
+        ContextCompat.registerReceiver(
+            this,
+            bluetoothOn,
+            IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+    }
+
+    private val bluetoothOn = SosListener.onBluetoothOn {
+        SosRuntime.state.value.active?.let { beacon.restart(it.record) }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -68,6 +82,7 @@ class SosService : Service() {
     }
 
     override fun onDestroy() {
+        runCatching { unregisterReceiver(bluetoothOn) }
         beacon.stop()
         scope.cancel()
         super.onDestroy()

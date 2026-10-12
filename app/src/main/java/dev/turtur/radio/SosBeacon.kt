@@ -60,6 +60,12 @@ class SosBeacon(private val context: Context) {
         updateCoded(payload)
     }
 
+    /** After a Bluetooth restart the old server and advert handles are dead; rebuild them. */
+    fun restart(record: SosRecord) {
+        stop()
+        update(record)
+    }
+
     @SuppressLint("MissingPermission")
     fun stop() {
         runCatching { adapter?.bluetoothLeAdvertiser?.stopAdvertising(legacyCallback) }
