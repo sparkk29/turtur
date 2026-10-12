@@ -30,7 +30,7 @@ Turtur is built for the moments when WhatsApp has no tower.
 </p>
 
 <p align="center">
-  <a href="dist/turtur-0.1.0-debug.apk"><b>Download the APK</b></a> · Android 8.0+ · <a href="#install-the-apk">install notes</a> · <a href="#screenshots">more screenshots</a>
+  <a href="dist/turtur-0.1.0.apk"><b>Download the APK</b></a> · Android 8.0+ · <a href="#install-the-apk">install notes</a> · <a href="#screenshots">more screenshots</a>
 </p>
 
 ## How a letter travels
@@ -133,11 +133,11 @@ These were captured on two Android 15 emulators with simulated Bluetooth. The si
 
 ## Install the APK
 
-[`dist/turtur-0.1.0-debug.apk`](dist/turtur-0.1.0-debug.apk) is a **debug build** (version 0.1.0, about 24 MB) for Android 8.0 or newer.
+[`dist/turtur-0.1.0.apk`](dist/turtur-0.1.0.apk) is a **debug build** (version 0.1.0, about 24 MB) for Android 8.0 or newer.
 
 SHA-256: `7d286ab56542b095a5a183d08abd1f7a10f55c3fe04500d34c6bbf23cf20f820`
 
-1. Copy the APK to the phone, or install it from a computer with `adb install dist/turtur-0.1.0-debug.apk`.
+1. Copy the APK to the phone, or install it from a computer with `adb install dist/turtur-0.1.0.apk`.
 2. When Android asks, allow your file manager or browser to install unknown apps.
 3. On first launch, allow Bluetooth and notifications. Allow location when you set up SOS so the beacon can include a GPS fix.
 
