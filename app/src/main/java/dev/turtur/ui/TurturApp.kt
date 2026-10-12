@@ -52,7 +52,13 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun TurturApp(state: UiState, vm: TurturViewModel, cameraGranted: Boolean, onNeedCamera: () -> Unit) {
+fun TurturApp(
+    state: UiState,
+    vm: TurturViewModel,
+    cameraGranted: Boolean,
+    onNeedCamera: () -> Unit,
+    onNeedLocation: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -78,13 +84,20 @@ fun TurturApp(state: UiState, vm: TurturViewModel, cameraGranted: Boolean, onNee
             Screen.POCKET -> Pocket(state, vm)
             Screen.ROSTER -> Roster(state, vm)
             Screen.SETTINGS -> Settings(state, vm)
+            Screen.SOS -> SosScreen(state, vm, onNeedLocation)
+            Screen.SAFETY -> SafetyScreen(state, vm, cameraGranted, onNeedCamera, onNeedLocation)
+            Screen.HEARD -> HeardScreen(state, vm)
+            Screen.FINDER -> FinderScreen(state, vm, onNeedLocation)
         }
     }
 }
 
 @Composable
 private fun Gate(state: UiState, vm: TurturViewModel) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
         Image(
             painter = painterResource(R.drawable.ic_launcher_foreground),
             contentDescription = null,
@@ -99,6 +112,7 @@ private fun Gate(state: UiState, vm: TurturViewModel) {
         Field("Your name on this trip", state.displayName, vm::onDisplayName)
         CopperButton("Start a trip") { vm.go(Screen.CREATE) }
         CopperButton("Join a trip") { vm.go(Screen.JOIN) }
+        SosRow(state, vm)
     }
 }
 
@@ -179,6 +193,7 @@ private fun Home(state: UiState, vm: TurturViewModel) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Tile("Pocket ($carrying)") { vm.go(Screen.POCKET) }
         }
+        SosRow(state, vm)
         TextButton(onClick = { vm.go(Screen.ROSTER) }) { Text("Flock QR", color = Copper) }
         TextButton(onClick = { vm.go(Screen.SETTINGS) }) { Text("Trip settings", color = Copper) }
     }
@@ -350,7 +365,7 @@ private fun Warning(vm: TurturViewModel) {
         Spacer(Modifier.height(24.dp))
         Text("Before you fly", style = androidx.compose.material3.MaterialTheme.typography.headlineMedium, color = Paper)
         Text(
-            "Turtur does not use the internet. Notes are sealed for the recipient. Nearby Bluetooth devices can still see that Turtur is on. This is not an emergency beacon. Mail can be late or never land.",
+            "Turtur does not use the internet. Notes are sealed for the recipient. Nearby Bluetooth devices can still see that Turtur is on. Mail can be late or never land. The SOS beacon is best effort: it only reaches Turtur phones in Bluetooth range, so call emergency services first if you have any signal.",
             color = Paper.copy(alpha = 0.85f),
         )
         CopperButton("I understand") { vm.acknowledgeWarning() }
@@ -387,7 +402,7 @@ private fun TtlPicker(selectedHours: Int?, onSelect: (Int?) -> Unit) {
 }
 
 @Composable
-private fun Field(label: String, value: String, onChange: (String) -> Unit) {
+internal fun Field(label: String, value: String, onChange: (String) -> Unit) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
@@ -406,7 +421,7 @@ private fun Field(label: String, value: String, onChange: (String) -> Unit) {
 }
 
 @Composable
-private fun CopperButton(text: String, enabled: Boolean = true, onClick: () -> Unit) {
+internal fun CopperButton(text: String, enabled: Boolean = true, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -417,19 +432,19 @@ private fun CopperButton(text: String, enabled: Boolean = true, onClick: () -> U
 }
 
 @Composable
-private fun Tile(text: String, onClick: () -> Unit) {
+internal fun Tile(text: String, color: Color = Copper, onClick: () -> Unit) {
     Text(
         text = text,
-        color = Ink,
+        color = if (color == Copper) Ink else Paper,
         modifier = Modifier
-            .background(Copper, RoundedCornerShape(4.dp))
+            .background(color, RoundedCornerShape(4.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
     )
 }
 
 @Composable
-private fun Card(content: @Composable () -> Unit) {
+internal fun Card(content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -441,12 +456,12 @@ private fun Card(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun Back(label: String, onClick: () -> Unit) {
+internal fun Back(label: String, onClick: () -> Unit) {
     TextButton(onClick = onClick) { Text("← $label", color = Copper) }
 }
 
 @Composable
-private fun chipColors() = FilterChipDefaults.filterChipColors(
+internal fun chipColors() = FilterChipDefaults.filterChipColors(
     selectedContainerColor = Copper,
     selectedLabelColor = Ink,
     containerColor = Color(0xFF2A211C),
@@ -459,7 +474,8 @@ private fun kindLabel(kind: PigeonKind) = when (kind) {
     PigeonKind.OKAY -> "Okay"
     PigeonKind.ACK -> "Landed"
     PigeonKind.ROSTER -> "Roster"
+    PigeonKind.SOS -> "SOS"
 }
 
-private fun prettyTime(unix: Long): String =
+internal fun prettyTime(unix: Long): String =
     SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(unix))

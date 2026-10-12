@@ -9,4 +9,27 @@
     <string name="arrivals_channel_desc">A pigeon landed on this loft. Content stays in the app.</string>
     <string name="arrival_notif_title">A pigeon landed</string>
     <string name="arrival_notif_body">%1$s from %2$s</string>
+    <string name="sos_beacon_channel_name">SOS beacon</string>
+    <string name="sos_beacon_channel_desc">Shown while this phone is broadcasting an SOS beacon.</string>
+    <string name="sos_beacon_title">SOS beacon on</string>
+    <string name="sos_beacon_fix_body">Broadcasting to Turtur phones in range · GPS fix %1$d min ago</string>
+    <string name="sos_beacon_nofix_body">Broadcasting to Turtur phones in range · no GPS fix yet</string>
+    <string name="sos_beacon_safe_body">Telling nearby phones you are safe, then stopping</string>
+    <string name="sos_alert_channel_name">SOS heard nearby</string>
+    <string name="sos_alert_channel_desc">Loud alert when a Turtur SOS beacon is in Bluetooth range.</string>
+    <string name="sos_heard_title">SOS from %1$s nearby</string>
+    <string name="sos_heard_safe_title">%1$s says they are safe</string>
+    <string name="sos_verified">Verified contact</string>
+    <string name="sos_unverified">Unverified Turtur SOS</string>
+    <string name="sos_heard_fix">GPS fix %1$d min old</string>
+    <string name="sos_heard_nofix">No GPS fix in beacon</string>
+    <string name="sos_heard_hint">Tap to open the finder. Call emergency services if you can.</string>
+    <string name="sos_unread_title">SOS beacon nearby</string>
+    <string name="sos_unread_body">A Turtur SOS is in Bluetooth range but its details could not be read. Tap to find it.</string>
+    <string name="sos_carry_channel_name">Carrying an SOS</string>
+    <string name="sos_carry_channel_desc">Reminds you to text a hiker\'s emergency contacts once you have signal.</string>
+    <string name="sos_carry_title">You are carrying an SOS</string>
+    <string name="sos_carry_body">For %1$s. Text their emergency contacts when you have signal.</string>
+    <string name="sos_carry_signal_body">You have mobile signal. Text the emergency contacts for %1$s now.</string>
+    <string name="sos_carry_action">Text %1$s\'s contacts</string>
 </resources>

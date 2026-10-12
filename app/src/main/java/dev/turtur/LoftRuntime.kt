@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import dev.turtur.flock.FlockEngine
 import dev.turtur.radio.TurturRadio
+import dev.turtur.sos.SosRuntime
 import dev.turtur.store.TripStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +38,8 @@ object LoftRuntime {
             store = TripStore(app)
             engine = FlockEngine(store)
             radio = TurturRadio(app, engine, scope)
+            SosRuntime.init(app)
+            engine.onSos = { record -> SosRuntime.onHeard(record, rssi = null, viaFlock = true) }
             engine.load()
             ready = true
         }

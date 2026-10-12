@@ -37,7 +37,7 @@ Treat radio authentication as **best-effort flock proof**, not as a well-funded 
 
 ### Seizure and backups
 
-If the phone is unlocked, the attacker has the loft. OS backups, screenshots of QR, and notifications on a lock screen can leak arrivals. **End trip** wipes Turtur’s store; it cannot wipe screenshots, notifications already shown, or forensic copies.
+If the phone is unlocked, the attacker has the loft. OS backups, screenshots of QR, and notifications on a lock screen can leak arrivals. **End trip** wipes Turtur’s store; it cannot wipe screenshots, notifications already shown, or forensic copies. End trip also **keeps** the separate guardian store on purpose: your SOS key, emergency contacts, and heard beacons from the last 72 hours.
 
 **Duress / decoy loft is not in MVP.** Assume seized phone = seized trip.
 
@@ -51,11 +51,23 @@ If Bluetooth is off, pigeons do not fly. Copy must not imply otherwise.
 
 ### Location
 
-We avoid GPS in packets. Typed meetup names can still be identifying (“Maya’s van”). Notifications default to hidden content on the lock screen.
+Mail pigeons never carry GPS. Typed meetup names can still be identifying (“Maya’s van”). Notifications default to hidden content on the lock screen. The **SOS beacon is the exception**: it broadcasts your GPS fix in the clear on purpose, and SOS alerts are visible on the lock screen.
 
-### Not a safety device
+### Best-effort SOS
 
-Okay ≠ SOS. Turtur is not a PLB, Garmin inReach, or ranger radio. If someone is lost or injured, Turtur may never deliver. **Do not market emergency use.** Delay and loss are normal.
+Okay ≠ SOS. The SOS beacon is a separate, opt-in tool. It is **not** a PLB, Garmin inReach, satellite SOS, or ranger radio, and it never replaces calling 112. Market it as "might help someone nearby find you", never as rescue.
+
+- **No reach to phones without Turtur.** Android and iOS do not let an app alert phones that don't have it installed. We do not spoof Fast Pair, Apple proximity pop-ups, or Find My adverts.
+- **Range is Bluetooth range.** That is tens of metres on most phones and a few hundred on phones with LE Coded PHY. Terrain, bodies, and pockets cut it further. If no Turtur phone passes, nobody hears you.
+- **Location and phone numbers are public to listeners.** SOS records are signed but not encrypted: any Turtur phone in range (and anyone running a BLE scanner with our UUID) can read your name, GPS fix, battery, and up to three emergency contact numbers. The SOS screen warns about this before it starts.
+- **Anyone can forge an unverified SOS.** Signatures only prove a record was not altered and that later updates come from the same key. A stranger's beacon is labelled *unverified*. Only contacts whose guardian card you scanned, or SOS pigeons that arrive signed through your trip, show as *verified*. Expect pranks and mistakes; rescuers should still approach carefully.
+- **Replay is limited, not prevented.** Listeners reject the same or a lower sequence number for a beacon they have seen. A recorded beacon replayed to someone who never heard the original will still alert them.
+- **The SMS bridge depends on a human.** The person carrying your SOS must tap Send in their own SMS app once they have signal. Turtur cannot send SMS by itself (no `SEND_SMS`), cannot confirm delivery, and the cellular-signal nudge only fires when the phone sees mobile data, not voice-only service.
+- **Battery.** The beacon advertises about once a second and takes a GPS fix every 10 minutes. Expect roughly a day or more on a healthy battery; cold weather and a weak battery shorten this a lot. Screen off helps.
+- **Background listening has gaps.** The Good Samaritan listener uses a system-filtered background scan. Some Android 10–11 phones and aggressive battery savers only deliver results while Turtur's loft service is running. Full-screen alerts can be blocked on Android 14 and later unless the user allows them.
+- **GPS may be stale or missing.** Inside a gully or under a canopy the fix can be old or absent; the record says when it was taken and how accurate it was.
+
+Delay and loss are normal for mail. For an SOS, assume it may never be heard.
 
 Festival extra: stolen phones, photographed flock QR on a cooler — late strangers might join until the cap if you leave the QR up. Treat the QR like a house key while the trip is live.
 
@@ -78,11 +90,21 @@ People may try to use Turtur where radios are restricted, or to evade lawful int
 
 On first trip create:
 
-> Turtur does not use the internet. Notes are sealed for the recipient. Nearby Bluetooth devices can still see that Turtur is on. This is not an emergency beacon. Mail can be late or never land.
+> Turtur does not use the internet. Notes are sealed for the recipient. Nearby Bluetooth devices can still see that Turtur is on. Mail can be late or never land. The SOS beacon is best effort: it only reaches Turtur phones in Bluetooth range, so call emergency services first if you have any signal.
 
 On Okay:
 
 > This goes to your flock, not rescue services.
+
+On SOS (before starting):
+
+> If you have any mobile signal, call emergency services first. Turtur only reaches Turtur phones within Bluetooth range.
+>
+> While the beacon is on, any Turtur phone in range can read your name, GPS position, and the phone numbers of your emergency contacts.
+
+On a stranger's SOS:
+
+> Unverified Turtur SOS. Could be a mistake or a prank; still worth a careful look.
 
 On End trip:
 

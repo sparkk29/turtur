@@ -24,13 +24,24 @@ Not in MVP. Do not start these until the three-phone camp-mail demo is boringly 
 - **Padding / dummy pigeons** for Crowd habitat
 - **Watch / lock-screen glance**: “Maya · meetup · kitchen · dusk”
 
+## SOS follow-ups
+
+The best-effort SOS beacon shipped (see `flaw.md` → Best-effort SOS). Next:
+
+- **Check-in timer (dead-man switch)**: "start SOS if I don't check in by 17:00", for falls that leave someone unconscious
+- **Optional internet bridge**: opt-in relay so a carrier with data can deliver the SOS without a manual SMS tap (breaks the no-server rule; needs its own threat model)
+- **Relay re-broadcast** with hop count, so finders are never led to the carrier instead of the hiker
+- **Compass needle** in the finder (sensor heading) instead of a bearing in degrees
+- **Siren and strobe** on the victim's phone for people nearby without Turtur
+- **Per-SOS encrypted note** to verified contacts, alongside the public position
+
 ## Later / maybe never
 
 - Public nearby chat, discovery of strangers, dating
 - Live GPS sharing
 - Voice notes
 - Wi-Fi Aware / Wi-Fi Direct / Meshtastic radio bridges
-- Official SOS / mountain rescue integration (liability, false confidence)
+- Official mountain-rescue or 112 integration (liability, false confidence); the Turtur-to-Turtur SOS beacon is not this
 - Desktop / web
 - Phone-number identity
 

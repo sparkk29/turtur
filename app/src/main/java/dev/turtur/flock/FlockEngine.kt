@@ -15,6 +15,7 @@ import dev.turtur.model.OkayStatus
 import dev.turtur.model.OutboxRecord
 import dev.turtur.model.PigeonKind
 import dev.turtur.model.SignedRoster
+import dev.turtur.model.SosRecord
 import dev.turtur.model.TripSnapshot
 import dev.turtur.model.label
 import dev.turtur.model.newPigeonId
@@ -43,6 +44,9 @@ class FlockEngine(private val store: TripStore) {
         private set
 
     var onArrival: ((Arrival) -> Unit)? = null
+
+    /** Fires for flock SOS pigeons even when no UI is attached. */
+    var onSos: ((SosRecord) -> Unit)? = null
 
     fun load() {
         val trip = store.loadTrip()
@@ -196,6 +200,25 @@ class FlockEngine(private val store: TripStore) {
                 ),
             )
             fly(pigeonId, dest, PigeonKind.OKAY, status.label(), 2, inner, ttlMs)
+        }
+    }
+
+    fun releaseSos(record: SosRecord) {
+        if (state.trip == null) return
+        others().forEach { dest ->
+            val pigeonId = newPigeonId()
+            val inner = payload(
+                pigeonId = pigeonId,
+                destLoftId = dest.loftId,
+                kind = PigeonKind.SOS,
+                extra = InnerPayload(
+                    senderLoftId = me().loftId,
+                    kind = PigeonKind.SOS,
+                    sos = record,
+                    sigB64 = "",
+                ),
+            )
+            fly(pigeonId, dest, PigeonKind.SOS, sosSummary(record), SOS_PRIORITY, inner, SOS_TTL_MS)
         }
     }
 
@@ -447,11 +470,13 @@ class FlockEngine(private val store: TripStore) {
             timeLocal = inner.timeLocal,
             okay = inner.okay,
             note = inner.note,
+            sos = inner.sos,
         )
         val withArrival = state.copy(arrivals = listOf(arrival) + state.arrivals)
         state = withArrival
         persist(state)
         onArrival?.invoke(arrival)
+        if (inner.kind == PigeonKind.SOS) inner.sos?.let { onSos?.invoke(it) }
         if (inner.kind != PigeonKind.ROSTER) {
             queueAck(inner.senderLoftId, env.pigeonId)
         }
@@ -548,7 +573,14 @@ class FlockEngine(private val store: TripStore) {
             PigeonKind.OKAY -> inner.okay?.label() ?: "okay"
             PigeonKind.ACK -> "landed"
             PigeonKind.ROSTER -> "roster"
+            PigeonKind.SOS -> inner.sos?.let(::sosSummary) ?: "SOS"
         }
+
+        fun sosSummary(record: SosRecord): String =
+            if (record.cancelled) "${record.name} is safe (SOS cancelled)" else "SOS from ${record.name}"
+
+        const val SOS_PRIORITY = 9
+        const val SOS_TTL_MS = 72L * 3600_000
 
         fun distinctMembers(list: List<Member>): List<Member> =
             list.associateBy { it.loftId }.values.toList()

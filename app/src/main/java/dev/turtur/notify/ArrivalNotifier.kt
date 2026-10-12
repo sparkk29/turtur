@@ -35,6 +35,7 @@ object ArrivalNotifier {
     }
 
     fun notifyArrival(context: Context, arrival: Arrival, senderName: String) {
+        if (arrival.kind == PigeonKind.SOS) return
         ensureChannel(context)
         val open = PendingIntent.getActivity(
             context,

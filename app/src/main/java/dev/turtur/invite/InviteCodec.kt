@@ -29,8 +29,9 @@ object InviteCodec {
         return json.decodeFromString(String(bytes, Charsets.UTF_8))
     }
 
-    fun qrBitmap(invite: Invite, size: Int = 720): Bitmap {
-        val payload = encode(invite)
+    fun qrBitmap(invite: Invite, size: Int = 720): Bitmap = qrBitmap(encode(invite), size)
+
+    fun qrBitmap(payload: String, size: Int = 720): Bitmap {
         val bitMatrix = QRCodeWriter().encode(
             payload,
             BarcodeFormat.QR_CODE,

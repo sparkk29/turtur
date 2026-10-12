@@ -69,11 +69,22 @@ Blair's phone carries the letter but cannot read it. Only Chris's keys open it.
 - **Wild / Crowd habitat**: slow, battery-friendly radio for trails, or faster radio for festivals.
 - **End trip** wipes this phone's keys, roster, and mail.
 
+**SOS beacon (best effort)**
+- **Hold SOS for 3 seconds** and the phone becomes a slow, battery-friendly Bluetooth beacon. It works with or without a trip and carries your name, a signed GPS fix (refreshed every 10 minutes), battery level, and up to three emergency contact numbers. The SOS screen always offers **Call 112** first.
+- **Trip members** get the SOS as a top-priority pigeon through normal store-and-forward, and their phones also hear the beacon directly.
+- **Good Samaritan** (opt in, in Safety): any Turtur phone, from any trip, gets a loud alert when an SOS beacon is in Bluetooth range, even with Turtur closed.
+- **Finder**: a hot/cold signal meter plus distance and bearing from your GPS to the hiker's last fix.
+- **SMS bridge**: whoever heard the SOS is reminded to text the hiker's contacts, and nudged again when mobile signal comes back. The message is prefilled with the location and a map link, and they tap Send in their own SMS app. There is still no server.
+- **Guardian cards**: swap QR cards with hiking partners so their SOS shows as *verified* on your phone. A stranger's SOS is shown as *unverified*.
+- **Hold to say I'm safe** broadcasts a signed cancel for 30 minutes, then stops.
+
 ## Security model in one paragraph
 
 Each loft creates its own X25519 sealing key and Ed25519 signing key when it starts or joins a trip. Every pigeon is a sealed box to one recipient: an ephemeral X25519 exchange, HKDF-SHA256, then ChaCha20-Poly1305, with plaintext padded into fixed size bins. Inner payloads and roster updates are signed. Carriers can see envelope metadata (trip, destination loft, expiry, priority) but not content. Keys live in Android `EncryptedSharedPreferences`.
 
-Turtur is **not** an emergency beacon. Bluetooth radios are visible to anyone nearby, and mail can be late or never land. Read [`flaw.md`](flaw.md) before relying on it.
+The SOS beacon uses a separate, long-lived Ed25519 key that survives **End trip**. SOS records are signed but **not** encrypted, because strangers need the position to find you.
+
+Turtur is **not** a replacement for 112, a personal locator beacon, or satellite SOS. The SOS beacon reaches **only Turtur phones within Bluetooth range** (tens of metres, a few hundred on phones with long-range Bluetooth), and it never reaches phones without Turtur. Mail can be late or never land. Read [`flaw.md`](flaw.md) before relying on it.
 
 ## Getting started
 
@@ -93,6 +104,14 @@ Try the three-phone demo:
 5. Bring B near A, then near C, and tap **Feed the flock** each time (or just wait for the background sync).
 6. C gets the letter, and A eventually sees it marked *landed*.
 
+Try the SOS beacon with two phones (no trip needed):
+
+1. On both phones open **Safety**, save a name, and scan each other's guardian card. On phone B turn on **Listen for SOS from any Turtur user**.
+2. On phone A add an emergency contact with a phone number, allow location, then hold **SOS** for 3 seconds.
+3. Phone B rings with "SOS from A nearby". Tap it to open the finder and walk around to watch the meter.
+4. On B tap **Text contacts**: the SMS app opens with A's location prefilled.
+5. On A hold **I'm safe**. B shows "A says they are safe".
+
 ## Project layout
 
 ```
@@ -100,10 +119,11 @@ app/src/main/java/dev/turtur/
 ├── LoftRuntime.kt / LoftService.kt   process-wide loft and the foreground BLE service
 ├── crypto/      sealed boxes, signatures, padding
 ├── flock/       FlockEngine: trips, pigeons, roster, TTL, ACKs
-├── radio/       BLE advertise, scan, GATT sync protocol
+├── radio/       BLE advertise, scan, GATT sync protocol, SOS beacon and listener
+├── sos/         SOS records, guardian cards, beacon service, alerts, SMS bridge
 ├── invite/      flock QR encode and decode
 ├── notify/      arrival notifications and haptics
-├── store/       on-device storage
+├── store/       on-device storage (trip store and the guardian store)
 ├── model/       data types
 └── ui/          Jetpack Compose screens
 ```
